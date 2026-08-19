@@ -46,7 +46,6 @@
 #include "handling_manager.hpp"
 
 #include "binaryrwparser.hpp"
-#include "memorypatcher.hpp"
 #include "assetdownloader.hpp"
 #include "streamingextender.hpp"
 #include "audioextender.hpp"
