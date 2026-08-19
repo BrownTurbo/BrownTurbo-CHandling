@@ -1,0 +1,96 @@
+/*
+    Plugin-SDK (Grand Theft Auto San Andreas) header file
+    Authors: GTA Community. See more here
+    https://github.com/DK22Pac/plugin-sdk
+    Do not delete this comment block. Respect others' work!
+*/
+#pragma once
+#include "PluginBase.h"
+#include "RenderWare.h"
+#include "CQuaternion.h"
+
+class CMatrix {
+public:
+    // RwV3d-like:
+    CVector      right;
+    unsigned int flags;
+    CVector      up;
+    unsigned int pad1;
+    CVector      at;
+    unsigned int pad2;
+    CVector      pos;
+    unsigned int pad3;
+    
+	RwMatrix *m_pAttachMatrix;
+	bool m_bOwnsAttachedMatrix; // do we need to delete attaching matrix at detaching
+
+    inline CMatrix() {
+        m_pAttachMatrix = nullptr;
+        m_bOwnsAttachedMatrix = false;
+    }
+
+    CMatrix(plugin::dummy_func_t) {}
+	CMatrix(CMatrix const& matrix);
+	CMatrix(RwMatrix *matrix, bool temporary); // like previous + attach
+	~CMatrix(); // destructor detaches matrix if attached 
+	void Attach(RwMatrix *matrix, bool temporary);
+	void Detach();
+	void CopyOnlyMatrix(CMatrix const& matrix); // copy base RwMatrix to another matrix
+	void Update(); // update RwMatrix with attaching matrix. This doesn't check if attaching matrix is present, so use it only if you know it is present.
+	               // Using UpdateRW() is more safe since it perform this check.
+	void UpdateRW(); // update RwMatrix with attaching matrix.
+	void UpdateRW(RwMatrix *matrix); // update RwMatrix with this matrix
+	void SetUnity();
+	void ResetOrientation();
+	void SetScale(float scale); // set (scaled)
+	void SetScale(float x, float y, float z); // set (scaled)
+	void SetTranslateOnly(float x, float y, float z);
+	void SetTranslate(float x, float y, float z); // like previous + reset orientation
+	void SetRotateXOnly(float angle);
+	void SetRotateYOnly(float angle);
+	void SetRotateZOnly(float angle);
+	void SetRotateX(float angle);
+	void SetRotateY(float angle);
+	void SetRotateZ(float angle);
+	void SetRotate(float x, float y, float z); // set rotate on 3 axes
+	void RotateX(float angle);
+	void RotateY(float angle);
+	void RotateZ(float angle);
+	void Rotate(float x, float y, float z); // rotate on 3 axes
+	void Translate(float x, float y, float z); // move the position
+	void Reorthogonalise();
+	void CopyToRwMatrix(RwMatrix *matrix); // similar to UpdateRW(RwMatrixTag *)
+	void SetRotate(CQuaternion  const& quat);
+    void Scale(float scale);
+    void Scale(float x, float y, float z);
+	void operator=(CMatrix const& right);
+	void operator+=(CMatrix const& right);
+	void operator*=(CMatrix const& right);
+
+	CVector& GetRight() { return right; }
+	const CVector& GetRight() const { return right; }
+
+	CVector& GetForward() { return up; }
+	const CVector& GetForward() const { return up; }
+
+	CVector& GetUp() { return at; }
+	const CVector& GetUp() const { return at; }
+
+	CVector& GetPosition() { return pos; }
+	const CVector& GetPosition() const { return pos; }
+};
+VALIDATE_OFFSET(CMatrix, right, 0x0);
+VALIDATE_OFFSET(CMatrix, flags, 0xC);
+VALIDATE_OFFSET(CMatrix, up, 0x10);
+VALIDATE_OFFSET(CMatrix, pad1, 0x1C);
+VALIDATE_OFFSET(CMatrix, at, 0x20);
+VALIDATE_OFFSET(CMatrix, pad2, 0x2C);
+VALIDATE_OFFSET(CMatrix, pos, 0x30);
+VALIDATE_OFFSET(CMatrix, pad3, 0x3C);
+VALIDATE_OFFSET(CMatrix, m_pAttachMatrix, 0x40);
+VALIDATE_OFFSET(CMatrix, m_bOwnsAttachedMatrix, 0x44);
+VALIDATE_SIZE(CMatrix, 0x48);
+
+CMatrix operator*(CMatrix const&a, CMatrix const&b);
+CVector operator*(CMatrix const&a, CVector const&b);
+CMatrix operator+(CMatrix const&a, CMatrix const&b);

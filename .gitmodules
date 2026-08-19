@@ -1,0 +1,6 @@
+[submodule "omp-sdk"]
+	path = Server/deps/omp-sdk
+	url = https://github.com/openmultiplayer/open.mp-sdk.git
+[submodule "PawnNatives"]
+	path = Server/deps/pawn-natives
+	url = https://github.com/openmultiplayer/pawn-natives.git

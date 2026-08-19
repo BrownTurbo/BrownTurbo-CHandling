@@ -1,0 +1,323 @@
+/*
+    Plugin-SDK (Grand Theft Auto San Andreas) header file
+    Authors: GTA Community. See more here
+    https://github.com/DK22Pac/plugin-sdk
+    Do not delete this comment block. Respect others' work!
+*/
+#pragma once
+#include "PluginBase.h"
+#include "CBouncingPanel.h"
+#include "CColPoint.h"
+#include "CDamageManager.h"
+#include "CDoor.h"
+#include "CVehicle.h"
+#include "eSkidmarkType.h"
+
+class CObject;
+
+enum eCarNodes {
+    CAR_NODE_NONE = 0,
+    CAR_CHASSIS = 1,
+    CAR_WHEEL_RF = 2,
+    CAR_WHEEL_RM = 3,
+    CAR_WHEEL_RB = 4,
+    CAR_WHEEL_LF = 5,
+    CAR_WHEEL_LM = 6,
+    CAR_WHEEL_LB = 7,
+    CAR_DOOR_RF = 8,
+    CAR_DOOR_RR = 9,
+    CAR_DOOR_LF = 10,
+    CAR_DOOR_LR = 11,
+    CAR_BUMP_FRONT = 12,
+    CAR_BUMP_REAR = 13,
+    CAR_WING_RF = 14,
+    CAR_WING_LF = 15,
+    CAR_BONNET = 16,
+    CAR_BOOT = 17,
+    CAR_WINDSCREEN = 18,
+    CAR_EXHAUST = 19,
+    CAR_MISC_A = 20,
+    CAR_MISC_B = 21,
+    CAR_MISC_C = 22,
+    CAR_MISC_D = 23,
+    CAR_MISC_E = 24,
+    CAR_NUM_NODES
+};
+
+#pragma pack(push, 4)
+class CAutomobile : public CVehicle {
+protected:
+    CAutomobile(plugin::dummy_func_t) : CVehicle(plugin::dummy) {}
+
+public:
+    CDamageManager  m_damageManager;
+    CDoor           m_doors[6];
+    RwFrame*        m_aCarNodes[CAR_NUM_NODES];
+    CBouncingPanel  m_panels[3];
+    CDoor           m_swingingChassis;
+
+    CColPoint   m_wheelColPoint[4];
+    float       m_fWheelsSuspensionCompression[4]; // 0.0 compressed, 1.0 completely relaxed
+    float       m_fWheelsSuspensionCompressionPrev[4];
+    float       m_fWheelCounts[4];
+    float       m_fBrakeCount;
+    float       m_fIntertiaValue1;
+    float       m_fIntertiaValue2;
+    eSkidmarkType m_wheelSkidmarkType[4];
+    bool        m_bWheelSkidmarkBloody[4];
+    bool        m_bWheelSkidmarkMuddy[4];
+    float       m_fWheelRotation[4];
+    float       m_fWheelPosition[4];
+    float       m_fWheelSpeed[4];
+    float       m_fWheelBurnoutSpeed[4]; // unused
+
+    struct {
+        bool bTaxiLight : 1;
+        bool bShouldNotChangeColour : 1;
+        bool bWaterTight : 1;
+        bool bDoesNotGetDamagedUpsideDown : 1;
+        bool bCanBeVisiblyDamaged : 1;
+        bool bTankExplodesCars : 1;
+        bool bIsBoggedDownInSand : 1;
+        bool bIsMonsterTruck : 1;
+    } m_nAutomobileFlags;
+    short m_bDoingBurnout;
+
+    short m_wMiscComponentAngle;
+    short m_wMiscComponentAnglePrev;
+
+    int m_dwBusDoorTimerEnd;
+    int m_dwBusDoorTimerStart;
+
+    float m_aSuspensionSpringLength[4];
+    float m_aSuspensionLineLength[4];
+    float m_fFrontHeightAboveRoad;
+    float m_fRearHeightAboveRoad;
+
+    float m_fExtraTractionMult;
+    float m_fNitroValue; // m_fTireTemperature
+
+    float m_fAircraftGoToHeading;
+    float m_fRotationBalance; // controls destroyed helicopter rotation
+    float m_fMoveDirection; // prev speed
+    CVector m_vecMoveForce;
+    CVector m_vecTurnForce;
+
+    float m_aDoorRotation[6]; // unused
+
+    float m_fBurningTimer; // starts when vehicle health is lower than 250.0, car blows up when it hits 5000.0
+
+    CEntity* m_pWheelCollisionEntity[4];
+    CVector  m_vWheelCollisionPos[4];
+
+    CPed* m_pExplosionVictim;
+    char field_92C[24]; // unknown
+    float m_fLeftDoorOpenForDriveBys;
+    float m_fRightDoorOpenForDriveBys;
+
+    float m_fDoomVerticalRotation;
+    float m_fDoomHorizontalRotation;
+    float m_fForcedOrientation;
+    float m_fPropRotate; // previously m_fUpDownLightAngle[0]
+    float m_fCumulativeDamage; // previously m_fUpDownLightAngle[1]
+
+    uint8_t     m_nNumContactWheels;
+    uint8_t     m_nWheelsOnGround;
+    uint8_t     m_nNumDriveWheelsOnGroundLastFrame;
+    float       m_fGasPedalAudioRevs; // adjusts the speed of playback of the skiding sound (0.0 to 1.0)
+    eWheelState m_wheelState[4];
+
+    FxSystem_c* m_pNitroParticle[2];
+    uint8_t     m_harvesterParticleCounter;
+    uint8_t     m_fireParticleCounter;
+    float       m_heliDustFxTimeConst;
+
+    // variables
+    static bool &m_sAllTaxiLights;
+    static CVector &vecHunterGunPos; // { 0.0f, 4.8f, -1.3f }
+    static CMatrix *matW2B;
+
+    //vtable
+    bool ProcessAI(unsigned int& arg0);
+    void ResetSuspension();
+    void ProcessFlyingCarStuff();
+    void DoHoverSuspensionRatios();
+    void ProcessSuspension();
+
+    //funcs
+    CAutomobile(int modelIndex, unsigned char createdBy, bool setupSuspensionLines);
+
+    // Find and save components ptrs (RwFrame) to m_modelNodes array
+    void SetupModelNodes();
+    // Process vehicle hydraulics
+    void HydraulicControl();
+    // Sets the angle of a vehicles extra. Called at 08A4 opcode (CONTROL_MOVABLE_VEHICLE_PART)
+    bool UpdateMovingCollision(float angle);
+    // Called at 098D opcode (GET_CAR_MOVING_COMPONENT_OFFSET)
+    float GetMovingCollisionOffset();
+    // Makes the helicopter fly to the specified location, keeping a specific Z height/altitude. This must be called for helis only.
+    void TellHeliToGoToCoors(float x, float y, float z, float altitudeMin, float altitudeMax);
+    // Force orientation for heli to specified angle (radians)
+    void SetHeliOrientation(float angle);
+    // Cancel orientation forcing (m_fForcedOrientation = -1.0f)
+    void ClearHeliOrientation();
+    // Makes the plane fly to the specified location, keeping a specific Z height/altitude.
+    void TellPlaneToGoToCoors(float x, float y, float z, float altitudeMin, float altitudeMax);
+    // Empty function
+    void HideAllComps();
+    // Empty function
+    void ShowAllComps();
+    // Set random damage to vehicle. Called when generating a vehicle @CCarCtrl::GenerateOneRandomCar
+    void SetRandomDamage(bool arg0);
+    // Make a vehicle fully damaged
+    void SetTotalDamage(bool arg0);
+    // if(m_nHornCounter) m_nHornCounter--;
+    void ReduceHornCounter();
+    // Apply custom car plate texture to vehicle
+    void CustomCarPlate_BeforeRenderingStart(CVehicleModelInfo* model);
+    // Reset car plate texture after rendering
+    void CustomCarPlate_AfterRenderingStop(CVehicleModelInfo* model);
+    // Check if vehicle is in air
+    bool GetAllWheelsOffGround();
+    // Some debug function
+    void DebugCode();
+    // Repair vehicle's tyre
+    void FixTyre(eWheels wheel);
+    // Repair vehicle's door. "nodeIndex" is an index of component in m_modelNodes array
+    void FixDoor(int nodeIndex, eDoors door);
+    // Repair vehicle's panel. "nodeIndex" is an index of component in m_modelNodes array
+    void FixPanel(int nodeIndex, ePanels panel);
+    // Enable/disable taxi light for taxi
+    void SetTaxiLight(bool enable);
+    // Enable taxi light for all taxis (CAutomobile::m_sAllTaxiLights = true;)
+    static void SetAllTaxiLights(bool arg0);
+    // Play horn for NPC vehicle (called @CAutomobile::ProcessAI)
+    void PlayHornIfNecessary();
+    void SetBusDoorTimer(unsigned int time, unsigned char arg1);
+    void ProcessAutoBusDoors();
+    // Make player vehicle jumps when pressing horn
+    void BoostJumpControl();
+    // Creates/updates nitro particle
+    void DoNitroEffect(float state);
+    // Remove nitro particle
+    void StopNitroEffect();
+    void NitrousControl(signed char);
+    void TowTruckControl();
+    // Empty function
+    CPed* KnockPedOutCar(eWeaponType arg0, unsigned short arg1, CPed* arg2);
+    void PopBootUsingPhysics();
+    // Close all doors
+    void CloseAllDoors();
+    void DoSoftGroundResistance(unsigned int& arg0);
+    void ProcessCarWheelPair(int arg0, int arg1, float arg2, CVector* arg3, CVector* arg4, float arg5, float arg6, float arg7, bool arg8);
+    float GetCarRoll();
+    float GetCarPitch();
+    bool IsInAir();
+    // Create colliding particles
+    void dmgDrawCarCollidingParticles(CVector const&, float force, eWeaponType weapon);
+    void ProcessCarOnFireAndExplode(unsigned char arg0);
+    CObject* SpawnFlyingComponent(int nodeIndex, unsigned int collisionType);
+    void ProcessBuoyancy();
+    // Process combine
+    void ProcessHarvester();
+    void ProcessSwingingDoor(int nodeIndex, eDoors door);
+    // Returns spawned flying component?
+    CObject* RemoveBonnetInPedCollision();
+    void UpdateWheelMatrix(int nodeIndex, int flags);
+    void PopDoor(int nodeIndex, eDoors door, bool showVisualEffect);
+    void PopPanel(int nodeIndex, ePanels panel, bool showVisualEffect);
+    void ScanForCrimes();
+    void TankControl();
+    // Makes a vehicles acts like a tank on a road - blows up collided vehicles. Must be called in a loop
+    void BlowUpCarsInPath();
+    void PlaceOnRoadProperly();
+    void PopBoot();
+    void CloseBoot();
+    void DoHeliDustEffect(float arg0, float arg1);
+    void SetBumperDamage(ePanels panel, bool withoutVisualEffect);
+    void SetPanelDamage(ePanels panel, bool createWindowGlass);
+    void SetDoorDamage(eDoors door, bool withoutVisualEffect);
+    bool RcbanditCheck1CarWheels(CPtrList& ptrlist);
+    bool RcbanditCheckHitWheels();
+    void FireTruckControl(float arg0);
+    bool HasCarStoppedBecauseOfLight();
+};
+VALIDATE_OFFSET(CAutomobile, m_damageManager, 0x5A0);
+VALIDATE_OFFSET(CAutomobile, m_doors, 0x5B8);
+VALIDATE_OFFSET(CAutomobile, m_aCarNodes, 0x648);
+VALIDATE_OFFSET(CAutomobile, m_panels, 0x6AC);
+VALIDATE_OFFSET(CAutomobile, m_swingingChassis, 0x70C);
+VALIDATE_OFFSET(CAutomobile, m_wheelColPoint, 0x724);
+VALIDATE_OFFSET(CAutomobile, m_fWheelsSuspensionCompression, 0x7D4);
+VALIDATE_OFFSET(CAutomobile, m_fWheelsSuspensionCompressionPrev, 0x7E4);
+VALIDATE_OFFSET(CAutomobile, m_fWheelCounts, 0x7F4);
+VALIDATE_OFFSET(CAutomobile, m_fBrakeCount, 0x804);
+VALIDATE_OFFSET(CAutomobile, m_fIntertiaValue1, 0x808);
+VALIDATE_OFFSET(CAutomobile, m_fIntertiaValue2, 0x80C);
+VALIDATE_OFFSET(CAutomobile, m_wheelSkidmarkType, 0x810);
+VALIDATE_OFFSET(CAutomobile, m_bWheelSkidmarkBloody, 0x820);
+VALIDATE_OFFSET(CAutomobile, m_bWheelSkidmarkMuddy, 0x824);
+VALIDATE_OFFSET(CAutomobile, m_fWheelRotation, 0x828);
+VALIDATE_OFFSET(CAutomobile, m_fWheelPosition, 0x838);
+VALIDATE_OFFSET(CAutomobile, m_fWheelSpeed, 0x848);
+VALIDATE_OFFSET(CAutomobile, m_fWheelBurnoutSpeed, 0x858);
+VALIDATE_OFFSET(CAutomobile, m_nAutomobileFlags, 0x868);
+VALIDATE_OFFSET(CAutomobile, m_bDoingBurnout, 0x86A);
+VALIDATE_OFFSET(CAutomobile, m_wMiscComponentAngle, 0x86C);
+VALIDATE_OFFSET(CAutomobile, m_wMiscComponentAnglePrev, 0x86E);
+VALIDATE_OFFSET(CAutomobile, m_dwBusDoorTimerEnd, 0x870);
+VALIDATE_OFFSET(CAutomobile, m_dwBusDoorTimerStart, 0x874);
+VALIDATE_OFFSET(CAutomobile, m_aSuspensionSpringLength, 0x878);
+VALIDATE_OFFSET(CAutomobile, m_aSuspensionLineLength, 0x888);
+VALIDATE_OFFSET(CAutomobile, m_fFrontHeightAboveRoad, 0x898);
+VALIDATE_OFFSET(CAutomobile, m_fRearHeightAboveRoad, 0x89C);
+VALIDATE_OFFSET(CAutomobile, m_fExtraTractionMult, 0x8A0);
+VALIDATE_OFFSET(CAutomobile, m_fNitroValue, 0x8A4);
+VALIDATE_OFFSET(CAutomobile, m_fAircraftGoToHeading, 0x8A8);
+VALIDATE_OFFSET(CAutomobile, m_fRotationBalance, 0x8AC);
+VALIDATE_OFFSET(CAutomobile, m_fMoveDirection, 0x8B0);
+VALIDATE_OFFSET(CAutomobile, m_vecMoveForce, 0x8B4);
+VALIDATE_OFFSET(CAutomobile, m_vecTurnForce, 0x8C0);
+VALIDATE_OFFSET(CAutomobile, m_aDoorRotation, 0x8CC);
+VALIDATE_OFFSET(CAutomobile, m_fBurningTimer, 0x8E4);
+VALIDATE_OFFSET(CAutomobile, m_pWheelCollisionEntity, 0x8E8);
+VALIDATE_OFFSET(CAutomobile, m_vWheelCollisionPos, 0x8F8);
+VALIDATE_OFFSET(CAutomobile, m_pExplosionVictim, 0x928);
+VALIDATE_OFFSET(CAutomobile, field_92C, 0x92C);
+VALIDATE_OFFSET(CAutomobile, m_fLeftDoorOpenForDriveBys, 0x944);
+VALIDATE_OFFSET(CAutomobile, m_fRightDoorOpenForDriveBys, 0x948);
+VALIDATE_OFFSET(CAutomobile, m_fDoomVerticalRotation, 0x94C);
+VALIDATE_OFFSET(CAutomobile, m_fDoomHorizontalRotation, 0x950);
+VALIDATE_OFFSET(CAutomobile, m_fForcedOrientation, 0x954);
+VALIDATE_OFFSET(CAutomobile, m_fPropRotate, 0x958);
+VALIDATE_OFFSET(CAutomobile, m_fCumulativeDamage, 0x95C);
+VALIDATE_OFFSET(CAutomobile, m_nNumContactWheels, 0x960);
+VALIDATE_OFFSET(CAutomobile, m_nWheelsOnGround, 0x961);
+VALIDATE_OFFSET(CAutomobile, m_nNumDriveWheelsOnGroundLastFrame, 0x962);
+VALIDATE_OFFSET(CAutomobile, m_fGasPedalAudioRevs, 0x964);
+VALIDATE_OFFSET(CAutomobile, m_wheelState, 0x968);
+VALIDATE_OFFSET(CAutomobile, m_pNitroParticle, 0x978);
+VALIDATE_OFFSET(CAutomobile, m_harvesterParticleCounter, 0x980);
+VALIDATE_OFFSET(CAutomobile, m_fireParticleCounter, 0x981);
+VALIDATE_OFFSET(CAutomobile, m_heliDustFxTimeConst, 0x984);
+VALIDATE_SIZE(CAutomobile, 0x988);
+#pragma pack(pop)
+
+VALIDATE_OFFSET(CAutomobile, m_swingingChassis, 0x70C);
+VALIDATE_OFFSET(CAutomobile, m_wheelColPoint, 0x724);
+VALIDATE_OFFSET(CAutomobile, m_nAutomobileFlags, 0x868);
+VALIDATE_OFFSET(CAutomobile, m_wMiscComponentAngle, 0x86C);
+VALIDATE_OFFSET(CAutomobile, m_aSuspensionSpringLength, 0x878);
+VALIDATE_OFFSET(CAutomobile, m_fBurningTimer, 0x8E4);
+VALIDATE_OFFSET(CAutomobile, m_pExplosionVictim, 0x928);
+VALIDATE_OFFSET(CAutomobile, m_fDoomVerticalRotation, 0x94C);
+VALIDATE_OFFSET(CAutomobile, m_pNitroParticle, 0x978);
+VALIDATE_OFFSET(CAutomobile, m_heliDustFxTimeConst, 0x984);
+VALIDATE_SIZE(CAutomobile, 0x988);
+
+extern CColPoint *aAutomobileColPoints;
+
+// Disable matfx (material effects) for material (callback), "data" parameter is unused
+RpMaterial *DisableMatFx(RpMaterial* material, void* data);
+// callback
+RpAtomic* GetCurrentAtomicObjectCB(RwObject* object, void* data);

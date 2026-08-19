@@ -1,0 +1,42 @@
+#pragma once
+
+#include <RakNet/bitstream.hpp>
+#include <sdk.hpp>
+#include <Server/Components/Pawn/pawn.hpp>
+#include "PacketEnum.h"
+#include <cstdint>
+
+// action identifier is sent as single byte
+enum CHandlingAction : unsigned char {
+  ACTION_INIT = 10, // This is the only packet that is sent  by the player, to
+                    // indicate that we can speak to him
+  ACTION_INIT_RESPONSE,
+
+  ACTION_RESET_MODEL = 15,
+  ACTION_RESET_VEHICLE,
+  ACTION_SET_VEHICLE_HANDLING,
+  ACTION_SET_MODEL_HANDLING,
+
+  ACTION_SET_PLAYER_HANDLING   = 19,
+  ACTION_RESET_PLAYER_HANDLING = 20,
+  ACTION_GET_VEHICLE_HANDLING  = 21,
+  ACTION_GET_MODEL_HANDLING    = 22,
+  ACTION_GET_PLAYER_HANDLING   = 23,
+  ACTION_RESET_ALL             = 24
+};
+
+struct CHandlingActionPacket
+{
+	NetworkBitStream data;
+
+	CHandlingActionPacket(CHandlingAction actionID)
+	{
+		data.Write((uint8_t)CHandlingPacketID::ID_CHANDLING);
+		data.Write((uint8_t)actionID);
+	}
+};
+
+namespace Actions
+{
+	bool Process(CHandlingAction id, NetworkBitStream &bs, IPlayer &player);
+}

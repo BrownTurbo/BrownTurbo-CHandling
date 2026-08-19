@@ -1,0 +1,31 @@
+/*
+    Plugin-SDK (Grand Theft Auto San Andreas) header file
+    Authors: GTA Community. See more here
+    https://github.com/DK22Pac/plugin-sdk
+    Do not delete this comment block. Respect others' work!
+*/
+#pragma once
+
+#include "PluginBase.h"
+#include "eCrimeType.h"
+#include "CVector.h"
+
+class PLUGIN_API CCrimeBeingQd {
+public:
+    unsigned int m_nCrimeType; // see eCrimeType
+    unsigned int m_nCrimeID;
+    unsigned int m_nTimeOfQing;
+    CVector      m_vecCoors;
+    bool         m_bAlreadyReported;
+    bool         m_bPoliceDontReallyCare;
+private:
+    char _pad1A[2];
+public:
+};
+VALIDATE_OFFSET(CCrimeBeingQd, m_nCrimeType, 0x0);
+VALIDATE_OFFSET(CCrimeBeingQd, m_nCrimeID, 0x4);
+VALIDATE_OFFSET(CCrimeBeingQd, m_nTimeOfQing, 0x8);
+VALIDATE_OFFSET(CCrimeBeingQd, m_vecCoors, 0xC);
+VALIDATE_OFFSET(CCrimeBeingQd, m_bAlreadyReported, 0x18);
+VALIDATE_OFFSET(CCrimeBeingQd, m_bPoliceDontReallyCare, 0x19);
+VALIDATE_SIZE(CCrimeBeingQd, 0x1C);
