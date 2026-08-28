@@ -16,31 +16,36 @@
 
 #include "extendedveh.h"
 
-namespace NativeHook {
+namespace NativeHook
+{
 using amx_native_fn_t = cell (*)(AMX*, cell*);
 
-struct HookEntry {
+struct HookEntry
+{
 	int index;
 	AMX* amx;
 	subhook_t hook;
 	cell (*origFn)(AMX*, cell*);
 };
 
-struct Key {
+struct Key
+{
 	AMX* amx;
 	int index;
 
 	bool operator==(const Key& other) const { return amx == other.amx && index == other.index; }
 };
 
-struct KeyHash {
+struct KeyHash
+{
 	size_t operator()(const Key& k) const
 	{
 		return std::hash<AMX*>()(k.amx) ^ (std::hash<int>()(k.index) << 1);
 	}
 };
 
-class NativeHookManager {
+class NativeHookManager
+{
 public:
 	static NativeHookManager& Instance()
 	{
@@ -64,9 +69,11 @@ public:
 		if (!core_)
 			return;
 
-		for (auto& hookData : pendingHooks_) {
+		for (auto& hookData : pendingHooks_)
+		{
 			int index = findNativeIndex(amx, hookData.nativeName);
-			if (index == -1) {
+			if (index == -1)
+			{
 				core_->logLn(LogLevel::Error, "[ExtendedVeh] native %s not found in AMX.", hookData.nativeName.c_str());
 				continue;
 			}
@@ -87,7 +94,8 @@ public:
 
 			if (!subhook_is_installed(hook))
 				core_->logLn(LogLevel::Error, "[ExtendedVeh] Failed to install Hook: %s at index %d", hookData.nativeName.c_str(), index);
-			else {
+			else
+			{
 				activeHooks_[key] = { index, amx, hook, orig };
 				core_->logLn(LogLevel::Debug, "[ExtendedVeh] Hook installed: %s at index %d", hookData.nativeName.c_str(), index);
 			}
@@ -102,13 +110,16 @@ public:
 		if (!core_)
 			return;
 
-		for (auto it = activeHooks_.begin(); it != activeHooks_.end();) {
-			if (it->first.amx == amx) {
+		for (auto it = activeHooks_.begin(); it != activeHooks_.end();)
+		{
+			if (it->first.amx == amx)
+			{
 				subhook_remove(it->second.hook);
 				subhook_free(it->second.hook);
 				core_->logLn(LogLevel::Debug, "[ExtendedVeh] Hook removed: index %d", it->second.index);
 				it = activeHooks_.erase(it);
-			} else
+			}
+			else
 				++it;
 		}
 	}
@@ -126,7 +137,8 @@ private:
 	NativeHookManager() = default;
 	~NativeHookManager()
 	{
-		for (auto& kv : activeHooks_) {
+		for (auto& kv : activeHooks_)
+		{
 			subhook_remove(kv.second.hook);
 			subhook_free(kv.second.hook);
 		}
@@ -135,7 +147,8 @@ private:
 	NativeHookManager(const NativeHookManager&) = delete;
 	NativeHookManager& operator=(const NativeHookManager&) = delete;
 
-	struct PendingHook {
+	struct PendingHook
+	{
 		std::string nativeName;
 		std::function<cell(AMX*, cell*, amx_native_fn_t)> handler;
 		PendingHook(const std::string& n, std::function<cell(AMX*, cell*, amx_native_fn_t)> h)
@@ -153,7 +166,8 @@ private:
 	{
 		int index = 0;
 		AMX_NATIVE_INFO* nativeInfo = nullptr;
-		while (amx_GetNative(amx, index, reinterpret_cast<char*>(&nativeInfo)) == AMX_ERR_NONE && nativeInfo) {
+		while (amx_GetNative(amx, index, reinterpret_cast<char*>(&nativeInfo)) == AMX_ERR_NONE && nativeInfo)
+		{
 			if (strcmp(nativeInfo->name, name.c_str()) == 0)
 				return index;
 			index++;

@@ -1,7 +1,19 @@
 #include "CollisionAssetRepository.h"
 
 #include <algorithm>
+
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
+
+#ifdef min
+#undef min
+#endif
+
+#ifdef max
+#undef max
+#endif
+
 #include <windows.h>
 #include <bcrypt.h>
 #include <cctype>

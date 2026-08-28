@@ -1,4 +1,15 @@
+
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
+
+#ifdef min
+#undef min
+#endif
+
+#ifdef max
+#undef max
+#endif
 
 #include "ModelTransferClient.h"
 #include "MainThreadQueue.h"
