@@ -79,9 +79,17 @@ SCRIPT_API(GetHandlingAttribType, cell(int attr))
 // native IsPlayerUsingCHandling(playerid);
 SCRIPT_API(IsPlayerUsingCHandling, bool(IPlayer& player))
 {
-	if (&player != nullptr) {
-		int playerid = player.getID();
-		return gPlayers[playerid].hasCHandling();
+	ExtendedVehCompo* compo = ExtendedVehCompo::get();
+	ICore* core_ = compo->getCore();
+	const auto& players_ = core_->getPlayers().players();
+	int playerid = player.getID();
+	for (auto it = players_.begin(); it != players_.end(); ++it)
+	{
+		IPlayer* player_ = *it;
+		if (player_->getID() == playerid)
+		{
+			return gPlayers[playerid].hasCHandling();
+		}
 	}
 	return false;
 }

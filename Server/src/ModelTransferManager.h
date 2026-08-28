@@ -1,6 +1,6 @@
 #pragma once
 #include <sdk.hpp>
-#include <RakNet/BitStream.h>
+#include <RakNet/bitstream.hpp>
 #include "Actions.h"
 #include <cstdint>
 #include <string>

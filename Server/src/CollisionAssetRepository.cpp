@@ -11,7 +11,6 @@
 #include <limits>
 #include <sstream>
 #include <vector>
-#include <type_traits>
 
 #pragma comment(lib, "bcrypt.lib")
 
@@ -763,7 +762,7 @@ namespace CustomVeh::collision
                 name.size())
                 return false;
 
-			if (value > std::numeric_limits<std::underlying_type_t<CustomModelId>>::max())
+			if (value > std::numeric_limits<CustomModelId>::max())
 			{
                 return false;
             }
