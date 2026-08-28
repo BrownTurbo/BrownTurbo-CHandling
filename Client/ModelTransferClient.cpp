@@ -1,3 +1,5 @@
+#define NOMINMAX
+
 #include "ModelTransferClient.h"
 #include "MainThreadQueue.h"
 #include "ModelCache.h"

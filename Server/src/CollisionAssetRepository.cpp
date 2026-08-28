@@ -1,6 +1,7 @@
 #include "CollisionAssetRepository.h"
 
 #include <algorithm>
+#define NOMINMAX
 #include <windows.h>
 #include <bcrypt.h>
 #include <cctype>
@@ -10,6 +11,7 @@
 #include <limits>
 #include <sstream>
 #include <vector>
+#include <type_traits>
 
 #pragma comment(lib, "bcrypt.lib")
 
@@ -761,10 +763,8 @@ namespace CustomVeh::collision
                 name.size())
                 return false;
 
-            if (value >
-                std::numeric_limits<
-                    CustomModelId>::max())
-            {
+			if (value > std::numeric_limits<std::underlying_type_t<CustomModelId>>::max())
+			{
                 return false;
             }
 
