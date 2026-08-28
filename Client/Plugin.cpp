@@ -51,6 +51,7 @@
 #include "binaryrwparser.hpp"
 #include "streamingextender.hpp"
 
+#include "CollisionLoader.h"
 #include "ImGuiOverlay.h"
 
 namespace fs = std::filesystem;
@@ -348,6 +349,7 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD dwReason, LPVOID lpReserved)
 				threadSpawned = true;
 				std::thread(InitializeHooks).detach();
 			}
+			ExtendedVeh::Collision::CollisionLoader::Instance().Initialize();
 		};
 		static CVehicle* s_prevLocalVehicle = nullptr;
 		Events::gameProcessEvent += []() {

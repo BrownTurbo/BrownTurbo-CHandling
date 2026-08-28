@@ -102,7 +102,7 @@ void ExtendedVehCompo::onInit(IComponentList* components)
 	if (!vehicles_) {
 		core_->logLn(LogLevel::Error,
 			"Error loading component %.*s: Vehicles component not loaded",
-			name.length(), name.data());
+			name.data());
 		return;
 	}
 	if (vehicles_) {

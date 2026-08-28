@@ -71,7 +71,7 @@ public:
 
 	void onPlayerDisconnect(IPlayer& player, PeerDisconnectReason reason) override;
 
-	void onVehicleStreamIn(IVehicle& vehicle, IPlayer& player);
+	void onVehicleStreamIn(IVehicle& vehicle, IPlayer& player) override;
 
 	void onPoolEntryDestroyed(IVehicle& vehicle) override;
 

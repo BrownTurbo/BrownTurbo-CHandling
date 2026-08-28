@@ -54,12 +54,13 @@ CHandlingAttribType GetHandlingAttributeType(CHandlingAttrib attribute)
 bool CanSetHandlingAttrib(CHandlingAttrib attribute)
 {
 	switch (attribute) {
-	case HANDL_UIDENTIFIER:
-	case HANDL_ANIMGROUP:
-	case HANDL_UIMONETARYVALUE:
-		return false;
+		case HANDL_UIDENTIFIER:
+		case HANDL_ANIMGROUP:
+		case HANDL_UIMONETARYVALUE:
+			return false;
+		default:
+			return true;
 	}
-	return true;
 }
 
 bool IsValidHandlingValue(CHandlingAttrib attribute, float value)
@@ -68,52 +69,52 @@ bool IsValidHandlingValue(CHandlingAttrib attribute, float value)
 		return false;
 
 	switch (attribute) {
-	case HANDL_FMASS:
-		return 1.0 <= value && value <= 50000.0;
-	case HANDL_FTURNMASS:
-		return 0.0 <= value && value <= 50000.0;
-	case HANDL_FDRAGMULTIPLIER:
-		return -200.0 <= value && value <= 200.0;
-	case HANDL_CENTREOFMASS_X:
-	case HANDL_CENTREOFMASS_Y:
-	case HANDL_CENTREOFMASS_Z:
-		return -10.0 <= value && value <= 10.0;
-	case HANDL_FTRACTIONMULTIPLIER:
-		return -100.0 <= value && value <= 100.0;
-	case HANDL_FTRACTIONLOSS:
-		return 0.0 <= value && value <= 100.0;
-	case HANDL_FTRACTIONBIAS:
-		return 0.0 <= value && value <= 1.0;
-	case HANDL_TR_FMAXVELOCITY:
-		return 0.1 <= value && value <= 10000.0;
-	case HANDL_TR_FENGINEACCELERATION:
-		return 0.0 <= value && value <= 10000.0;
-	case HANDL_TR_FENGINEINERTIA:
-		return -1000.0 <= value && value != 0.0 && value <= 1000.0;
-	case HANDL_FBRAKEDECELERATION:
-		return 0.1 <= value && value <= 10000.0;
-	case HANDL_FBRAKEBIAS:
-		return 0.0 <= value && value <= 1.0;
-	case HANDL_FSTEERINGLOCK:
-		return 0.0 <= value && value <= 360.0;
-	case HANDL_FSUSPENSIONFORCELEVEL:
-	case HANDL_FSUSPENSIONDAMPINGLEVEL:
-	case HANDL_FSUSPENSIONHIGHSPDCOMDAMP:
-		return 0.0 <= value && value <= 600.0;
-	case HANDL_FSUSPENSIONUPPERLIMIT:
-	case HANDL_FSUSPENSIONLOWERLIMIT:
-		return -50.0 <= value && value <= 50.0;
-	case HANDL_FSUSPENSIONBIAS:
-		return 0.0 <= value && value <= 1.0;
-	case HANDL_FSUSPENSIONANTIDIVEMULT:
-		return 0.0 <= value && value <= 30.0;
-	case HANDL_FSEATOFFSETDISTANCE:
-		return -20.0 <= value && value <= 20.0;
-	case HANDL_FCOLLISIONDAMAGEMULT:
-		return 0.0 <= value && value <= 10.0;
+		case HANDL_FMASS:
+			return 1.0 <= value && value <= 50000.0;
+		case HANDL_FTURNMASS:
+			return 0.0 <= value && value <= 50000.0;
+		case HANDL_FDRAGMULTIPLIER:
+			return -200.0 <= value && value <= 200.0;
+		case HANDL_CENTREOFMASS_X:
+		case HANDL_CENTREOFMASS_Y:
+		case HANDL_CENTREOFMASS_Z:
+			return -10.0 <= value && value <= 10.0;
+		case HANDL_FTRACTIONMULTIPLIER:
+			return -100.0 <= value && value <= 100.0;
+		case HANDL_FTRACTIONLOSS:
+			return 0.0 <= value && value <= 100.0;
+		case HANDL_FTRACTIONBIAS:
+			return 0.0 <= value && value <= 1.0;
+		case HANDL_TR_FMAXVELOCITY:
+			return 0.1 <= value && value <= 10000.0;
+		case HANDL_TR_FENGINEACCELERATION:
+			return 0.0 <= value && value <= 10000.0;
+		case HANDL_TR_FENGINEINERTIA:
+			return -1000.0 <= value && value != 0.0 && value <= 1000.0;
+		case HANDL_FBRAKEDECELERATION:
+			return 0.1 <= value && value <= 10000.0;
+		case HANDL_FBRAKEBIAS:
+			return 0.0 <= value && value <= 1.0;
+		case HANDL_FSTEERINGLOCK:
+			return 0.0 <= value && value <= 360.0;
+		case HANDL_FSUSPENSIONFORCELEVEL:
+		case HANDL_FSUSPENSIONDAMPINGLEVEL:
+		case HANDL_FSUSPENSIONHIGHSPDCOMDAMP:
+			return 0.0 <= value && value <= 600.0;
+		case HANDL_FSUSPENSIONUPPERLIMIT:
+		case HANDL_FSUSPENSIONLOWERLIMIT:
+			return -50.0 <= value && value <= 50.0;
+		case HANDL_FSUSPENSIONBIAS:
+			return 0.0 <= value && value <= 1.0;
+		case HANDL_FSUSPENSIONANTIDIVEMULT:
+			return 0.0 <= value && value <= 30.0;
+		case HANDL_FSEATOFFSETDISTANCE:
+			return -20.0 <= value && value <= 20.0;
+		case HANDL_FCOLLISIONDAMAGEMULT:
+			return 0.0 <= value && value <= 10.0;
+		default:
+			return false;
 	}
-
-	return false;
 }
 
 bool IsValidHandlingValue(CHandlingAttrib attribute, uint8_t value)
@@ -122,23 +123,24 @@ bool IsValidHandlingValue(CHandlingAttrib attribute, uint8_t value)
 		return false;
 
 	switch (attribute) {
-	case HANDL_BABS:
-		return value == 1 || value == 0;
-	case HANDL_NPERCENTSUBMERGED:
-		return 1 <= value && value <= 255;
-	case HANDL_TR_NDRIVETYPE:
-		return value == 'R' || value == 'F' || value == '4';
-	case HANDL_TR_NNUMBEROFGEARS:
-		return 1 <= value && value <= 5;
-	case HANDL_TR_NENGINETYPE:
-		return value == 'P' || value == 'D' || value == 'E';
-	case HANDL_FRONTLIGHTS:
-	case HANDL_REARLIGHTS:
-		return value == LIGHTS_SMALL || value == LIGHTS_BIG || value == LIGHTS_TALL || value == LIGHTS_LONG;
-	case HANDL_ANIMGROUP:
-		return 0 <= value && value <= 255;
+		case HANDL_BABS:
+			return value == 1 || value == 0;
+		case HANDL_NPERCENTSUBMERGED:
+			return 1 <= value && value <= 255;
+		case HANDL_TR_NDRIVETYPE:
+			return value == 'R' || value == 'F' || value == '4';
+		case HANDL_TR_NNUMBEROFGEARS:
+			return 1 <= value && value <= 5;
+		case HANDL_TR_NENGINETYPE:
+			return value == 'P' || value == 'D' || value == 'E';
+		case HANDL_FRONTLIGHTS:
+		case HANDL_REARLIGHTS:
+			return value == LIGHTS_SMALL || value == LIGHTS_BIG || value == LIGHTS_TALL || value == LIGHTS_LONG;
+		case HANDL_ANIMGROUP:
+			return 0 <= value && value <= 255;
+		default:
+			return false;
 	}
-	return false;
 }
 
 void* GetHandlingAttribPtr(struct tHandlingData* handling, CHandlingAttrib attrib)

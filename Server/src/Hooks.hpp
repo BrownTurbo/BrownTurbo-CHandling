@@ -5,6 +5,7 @@
 #include <memory>
 #include <mutex>
 #include <string>
+#include <unordered_set>
 #include <unordered_map>
 #include <vector>
 
@@ -64,7 +65,12 @@ public:
 	void LoadAMX(AMX* amx)
 	{
 		std::lock_guard<std::mutex> lock(mutex_);
+		if (hookedScripts_.contains(amx))
+			return;
+		hookedScripts_.insert(amx);
 		ExtendedVehCompo* compo = ExtendedVehCompo::get();
+		if (!compo)
+			return;
 		ICore* core_ = compo->getCore();
 		if (!core_)
 			return;
@@ -105,7 +111,10 @@ public:
 	void UnloadAMX(AMX* amx)
 	{
 		std::lock_guard<std::mutex> lock(mutex_);
+		hookedScripts_.erase(amx);
 		ExtendedVehCompo* compo = ExtendedVehCompo::get();
+		if (!compo)
+			return;
 		ICore* core_ = compo->getCore();
 		if (!core_)
 			return;
@@ -124,13 +133,16 @@ public:
 		}
 	}
 
-	cell (*GetOrig(AMX* amx, int index))(AMX*, cell*)
+	amx_native_fn_t GetOrig(AMX* amx, int index)
 	{
-		Key key { amx, index };
-		auto it = activeHooks_.find(key);
-		if (it != activeHooks_.end())
-			return it->second.origFn;
-		return nullptr;
+		if (!amx)
+			return nullptr;
+		std::lock_guard<std::mutex> lock(mutex_);
+		const Key key { amx, index };
+		const auto it = activeHooks_.find(key);
+		if (it == activeHooks_.end())
+			return nullptr;
+		return it->second.origFn;
 	}
 
 private:
@@ -161,6 +173,7 @@ private:
 	std::vector<PendingHook> pendingHooks_;
 	std::unordered_map<Key, HookEntry, KeyHash> activeHooks_;
 	std::mutex mutex_;
+	std::unordered_set<AMX*> hookedScripts_;
 
 	int findNativeIndex(AMX* amx, const std::string& name)
 	{

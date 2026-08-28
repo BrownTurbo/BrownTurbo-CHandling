@@ -2,6 +2,7 @@
 
 #include <mutex>
 #include <unordered_map>
+#include <string>
 
 class CustomVehicleBindingManager {
 public:

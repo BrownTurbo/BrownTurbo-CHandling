@@ -34,7 +34,7 @@ inline void SetCollisionOwnership(CBaseModelInfo* modelInfo, bool owns)
 }
 }
 
-namespace ExtendedVeh::collision {
+namespace ExtendedVeh::Collision {
 namespace {
 	constexpr std::size_t FOURCC_OFFSET = 0;
 	constexpr std::size_t SIZE_OFFSET = 4;
@@ -53,8 +53,7 @@ namespace {
 	constexpr std::uint32_t MAX_RECORDS = 256;
 }
 
-CollisionLoader&
-CollisionLoader::Instance()
+CollisionLoader& CollisionLoader::Instance()
 {
 	static CollisionLoader instance;
 	return instance;
@@ -226,15 +225,13 @@ CollisionLoader::DecodeVersion(
 	return std::nullopt;
 }
 
-std::uint32_t
-CollisionLoader::ReadU32LE(
+std::uint32_t CollisionLoader::ReadU32LE(
 	const std::uint8_t* p)
 {
 	return static_cast<std::uint32_t>(p[0]) | (static_cast<std::uint32_t>(p[1]) << 8) | (static_cast<std::uint32_t>(p[2]) << 16) | (static_cast<std::uint32_t>(p[3]) << 24);
 }
 
-std::int16_t
-CollisionLoader::ReadI16LE(
+std::int16_t CollisionLoader::ReadI16LE(
 	const std::uint8_t* p)
 {
 	const auto value = static_cast<std::uint16_t>(p[0]) | (static_cast<std::uint16_t>(p[1]) << 8);

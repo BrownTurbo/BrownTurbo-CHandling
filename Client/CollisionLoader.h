@@ -13,7 +13,7 @@
 class CBaseModelInfo;
 class CColModel;
 
-namespace ExtendedVeh::collision {
+namespace ExtendedVeh::Collision {
 using CustomModelId = std::uint32_t;
 using GtaModelId = std::int32_t;
 

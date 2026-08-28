@@ -1,6 +1,9 @@
 #include "CustomVehicleBindingManager.h"
+#include "CollisionLoader.h"
 #include "streamingextender.hpp"
 #include "utils.h"
+
+#include <game_sa/CStreaming.h>
 
 void CustomVehicleBindingManager::Bind(uint16_t vehicleId, uint32_t customModelId)
 {
@@ -23,8 +26,24 @@ void CustomVehicleBindingManager::Unbind(uint16_t vehicleId)
 	std::lock_guard lock(m_mutex);
 
 	auto it = m_bindings.find(vehicleId);
-	if (it == m_bindings.end())
-		return;
+	if (it != m_bindings.end()) {
+		uint32_t modelId = it->second.customModelId;
+
+		// 1. Tell GTA SA to unload the asset from the streaming pool
+		if (CStreaming::ms_aInfoForModel[modelId].m_nLoadState == LOADSTATE_LOADED) {
+			CStreaming::RemoveModel(modelId);
+		}
+
+		// 2. Erase custom collision boundaries
+		std::string err_;
+		ExtendedVeh::Collision::CollisionLoader::Instance().Unload(modelId, err_);
+		if (!err_.empty()) {
+			SendMsg(0xFFFFFF, std::format("Error: %s; vehicleId=%d modelId=%d", err_, vehicleId, modelId).c_str());
+		}
+
+		// 3. Clear local cache
+		m_bindings.erase(it);
+	}
 
 	// Restore the vehicle's real model before dropping the binding, if we
 	// ever actually applied one - otherwise the live CVehicle is left
