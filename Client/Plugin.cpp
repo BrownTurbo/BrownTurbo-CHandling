@@ -1,11 +1,11 @@
 // SDK
-#include "game_sa/CHandlingDataMgr.h"
-#include "game_sa/CTxdStore.h"
-#include "game_sa/CVisibilityPlugins.h"
-#include <game_sa/CModelInfo.h>
-#include <game_sa/rw/rpworld.h>
 #include <plugin_sa.h>
-#include <RenderWare.h>
+
+#include <game_sa/CHandlingDataMgr.h>
+#include <game_sa/CModelInfo.h>
+#include <game_sa/CTxdStore.h>
+#include <game_sa/CVisibilityPlugins.h>
+#include <game_sa/rw/rpworld.h>
 #include <shared/game/CVector.h>
 
 #include <windows.h>
@@ -334,7 +334,7 @@ void InitializeHooks()
 	};
 }
 
-std::unique_ptr<c_plugin> plugin;
+std::unique_ptr<c_plugin> Plugn;
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD dwReason, LPVOID lpReserved)
 {
@@ -390,7 +390,6 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD dwReason, LPVOID lpReserved)
 					}
 				}
 				if (!found) {
-					// New vehicle – cache it
 					uint16_t sampId = 0xFFFF;
 					// Find its SAMP ID (you can scan the pool again, but we already have it)
 					// Better: we can scan the pool once more, but we can also get the ID from the SAMP vehicle object.
@@ -441,7 +440,7 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD dwReason, LPVOID lpReserved)
 				s_prevLocalVehicle = curVehicle;
 			}
 		};
-		plugin = std::make_unique<c_plugin>(hModule);
+		Plugn = std::make_unique<c_plugin>(hModule);
 		break;
 	}
 	case DLL_PROCESS_DETACH: {
@@ -454,7 +453,7 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD dwReason, LPVOID lpReserved)
 			rakhook::destroy();
 		}
 
-		plugin.reset();
+		Plugn.reset();
 		break;
 	}
 	}
