@@ -12,10 +12,6 @@
 
 #define CHECK_TYPE(attribute, type)                                                                                \
 	if (GetHandlingAttributeType(attrib) != type) {                                                                \
-		auto core_ = ExtendedVehCompo::getCore();                                                                  \
-		if (!core_) {                                                                                              \
-			return false;                                                                                          \
-		}                                                                                                          \
 		core_->logLn(LogLevel::Error, "[ExtendedVeh] Invalid type (%d) specified for attribute %d", type, attrib); \
 		return false;                                                                                              \
 	}
@@ -123,7 +119,8 @@ bool __AddModelHandlingMod(uint16_t modelid, CHandlingAttrib attribute, const st
 
 bool __AddVehicleHandlingMod(uint16_t vehicleid, CHandlingAttrib attribute, const struct stHandlingMod mod)
 {
-	if (!ExtendedVehCompo::IsValidVehicle(vehicleid))
+	ExtendedVehCompo* compo = ExtendedVehCompo::get();
+	if (!compo->IsValidVehicle(vehicleid))
 		return false;
 
 	auto& vEntry = vehicleHandlings[vehicleid];
@@ -145,20 +142,22 @@ bool __AddVehicleHandlingMod(uint16_t vehicleid, CHandlingAttrib attribute, cons
 /* We use ProcessTick to broadcast queued modifications all at once instead of spamming with packets */
 void ProcessTick()
 {
+	ExtendedVehCompo* compo = ExtendedVehCompo::get();
+	ICore* core_ = compo->getCore();
 	while (!usOutgoingVehicleMods.empty()) {
 		const auto it = usOutgoingVehicleMods.begin();
 		uint16_t vehicleid = *it;
 		usOutgoingVehicleMods.erase(it);
 
 		auto vIt = vehicleHandlings.find(vehicleid);
-		if (!ExtendedVehCompo::IsValidVehicle(vehicleid) || vIt == vehicleHandlings.end() || vIt->second.usesModelHandling) {
+		if (!compo->IsValidVehicle(vehicleid) || vIt == vehicleHandlings.end() || vIt->second.usesModelHandling) {
 			continue;
 		}
 		struct CHandlingActionPacket p(ACTION_SET_VEHICLE_HANDLING);
 		p.data.Write(vehicleid);
 		__WriteHandlingEntryToBitStream(&p.data, vIt->second);
 
-		for (IPlayer* player : ExtendedVehCompo::getCore()->getPlayers().players()) {
+		for (IPlayer* player : core_->getPlayers().players()) {
 			player->sendPacket(Span<uint8_t>(p.data.GetData(), p.data.GetNumberOfBitsUsed()), 0, true);
 		}
 	}
@@ -177,7 +176,7 @@ void ProcessTick()
 		p.data.Write((uint16_t)modelid);
 		__WriteHandlingEntryToBitStream(&p.data, *mEntry);
 
-		for (IPlayer* player : ExtendedVehCompo::getCore()->getPlayers().players()) {
+		for (IPlayer* player : core_->getPlayers().players()) {
 			player->sendPacket(Span<uint8_t>(p.data.GetData(), p.data.GetNumberOfBitsUsed()), 0, true);
 		}
 	}
@@ -195,7 +194,8 @@ void InitializeModelHandlings()
 
 void OnCreateVehicle(int vehicleid)
 {
-	IVehicle* pVeh = ExtendedVehCompo::GetVehicleByID(vehicleid);
+	ExtendedVehCompo* compo = ExtendedVehCompo::get();
+	IVehicle* pVeh = compo->GetVehicleByID(vehicleid);
 	if (pVeh) {
 		ResetVehicleHandling(*pVeh, false);
 	}
@@ -272,7 +272,10 @@ bool ResetModelHandling(int modelid)
 
 	struct CHandlingActionPacket p(ACTION_RESET_MODEL);
 	p.data.Write((uint16_t)modelid);
-	for (IPlayer* player : ExtendedVehCompo::getCore()->getPlayers().players()) {
+
+	ExtendedVehCompo* compo = ExtendedVehCompo::get();
+	ICore* core_ = compo->getCore();
+	for (IPlayer* player : core_->getPlayers().players()) {
 		player->sendPacket(Span<uint8_t>(p.data.GetData(), p.data.GetNumberOfBitsUsed()), 0, true);
 	}
 	return true;
@@ -295,7 +298,9 @@ void ResetVehicleHandling(IVehicle& vehicle, bool sendToPlayers)
 		struct CHandlingActionPacket p(ACTION_RESET_VEHICLE);
 		p.data.Write((uint16_t)vehicleid);
 
-		for (IPlayer* player : ExtendedVehCompo::getCore()->getPlayers().players()) {
+		ExtendedVehCompo* compo = ExtendedVehCompo::get();
+		ICore* core_ = compo->getCore();
+		for (IPlayer* player : core_->getPlayers().players()) {
 			player->sendPacket(Span<uint8_t>(p.data.GetData(), p.data.GetNumberOfBitsUsed()), 0, true);
 		}
 	}
@@ -305,7 +310,9 @@ void ResetVehicleHandling(IVehicle& vehicle, bool sendToPlayers)
 
 bool SetVehicleHandling(uint16_t vehicleid, CHandlingAttrib attrib, float value)
 {
-	if (!ExtendedVehCompo::IsValidVehicle(vehicleid) || !CanSetHandlingAttrib(attrib))
+	ExtendedVehCompo* compo = ExtendedVehCompo::get();
+	ICore* core_ = compo->getCore();
+	if (!compo->IsValidVehicle(vehicleid) || !CanSetHandlingAttrib(attrib))
 		return false;
 	CHECK_TYPE(attrib, TYPE_FLOAT)
 
@@ -321,7 +328,9 @@ bool SetVehicleHandling(uint16_t vehicleid, CHandlingAttrib attrib, float value)
 
 bool SetVehicleHandling(uint16_t vehicleid, CHandlingAttrib attrib, unsigned int value)
 {
-	if (!ExtendedVehCompo::IsValidVehicle(vehicleid) || !CanSetHandlingAttrib(attrib))
+	ExtendedVehCompo* compo = ExtendedVehCompo::get();
+	ICore* core_ = compo->getCore();
+	if (!compo->IsValidVehicle(vehicleid) || !CanSetHandlingAttrib(attrib))
 		return false;
 
 	CHandlingAttribType type = GetHandlingAttributeType(attrib);
@@ -336,7 +345,9 @@ bool SetVehicleHandling(uint16_t vehicleid, CHandlingAttrib attrib, unsigned int
 
 bool SetVehicleHandling(uint16_t vehicleid, CHandlingAttrib attrib, uint8_t value)
 {
-	if (!ExtendedVehCompo::IsValidVehicle(vehicleid) || !CanSetHandlingAttrib(attrib))
+	ExtendedVehCompo* compo = ExtendedVehCompo::get();
+	ICore* core_ = compo->getCore();
+	if (!compo->IsValidVehicle(vehicleid) || !CanSetHandlingAttrib(attrib))
 		return false;
 	CHECK_TYPE(attrib, TYPE_BYTE)
 
@@ -354,6 +365,8 @@ bool SetModelHandling(uint16_t modelid, CHandlingAttrib attrib, float value)
 	if (!CVehicleMgr::IS_VALID_VEHICLE_MODEL(modelid) || !CanSetHandlingAttrib(attrib))
 		return false;
 
+	ExtendedVehCompo* compo = ExtendedVehCompo::get();
+	ICore* core_ = compo->getCore();
 	CHECK_TYPE(attrib, TYPE_FLOAT)
 
 	if (!IsValidHandlingValue(attrib, value))
@@ -384,6 +397,8 @@ bool SetModelHandling(uint16_t modelid, CHandlingAttrib attrib, uint8_t value)
 	if (!CVehicleMgr::IS_VALID_VEHICLE_MODEL(modelid) || !CanSetHandlingAttrib(attrib))
 		return false;
 
+	ExtendedVehCompo* compo = ExtendedVehCompo::get();
+	ICore* core_ = compo->getCore();
 	CHECK_TYPE(attrib, TYPE_BYTE)
 
 	if (!IsValidHandlingValue(attrib, value))
@@ -399,7 +414,9 @@ bool SetModelHandling(uint16_t modelid, CHandlingAttrib attrib, uint8_t value)
 
 bool GetVehicleHandling(uint16_t vehicleid, CHandlingAttrib attrib, float& ret)
 {
-	if (!ExtendedVehCompo::IsValidVehicle(vehicleid))
+	ExtendedVehCompo* compo = ExtendedVehCompo::get();
+	ICore* core_ = compo->getCore();
+	if (!compo->IsValidVehicle(vehicleid))
 		return false;
 	CHECK_TYPE(attrib, TYPE_FLOAT)
 
@@ -422,7 +439,8 @@ bool GetVehicleHandling(uint16_t vehicleid, CHandlingAttrib attrib, float& ret)
 
 bool GetVehicleHandling(uint16_t vehicleid, CHandlingAttrib attrib, unsigned int& ret)
 {
-	if (!ExtendedVehCompo::IsValidVehicle(vehicleid))
+	ExtendedVehCompo* compo = ExtendedVehCompo::get();
+	if (!compo->IsValidVehicle(vehicleid))
 		return false;
 	CHandlingAttribType type = GetHandlingAttributeType(attrib);
 	if (!(type == TYPE_UINT || type == TYPE_FLAG))
@@ -447,7 +465,9 @@ bool GetVehicleHandling(uint16_t vehicleid, CHandlingAttrib attrib, unsigned int
 
 bool GetVehicleHandling(uint16_t vehicleid, CHandlingAttrib attrib, uint8_t& ret)
 {
-	if (!ExtendedVehCompo::IsValidVehicle(vehicleid))
+	ExtendedVehCompo* compo = ExtendedVehCompo::get();
+	ICore* core_ = compo->getCore();
+	if (!compo->IsValidVehicle(vehicleid))
 		return false;
 	CHECK_TYPE(attrib, TYPE_BYTE)
 
@@ -472,6 +492,8 @@ bool GetModelHandling(uint16_t modelid, CHandlingAttrib attrib, float& ret)
 {
 	if (!CVehicleMgr::IS_VALID_VEHICLE_MODEL(modelid))
 		return false;
+	ExtendedVehCompo* compo = ExtendedVehCompo::get();
+	ICore* core_ = compo->getCore();
 	CHECK_TYPE(attrib, TYPE_FLOAT)
 
 	stHandlingEntry* mEntry = GetModelHandlingEntry(modelid);
@@ -509,6 +531,8 @@ bool GetModelHandling(uint16_t modelid, CHandlingAttrib attrib, uint8_t& ret)
 {
 	if (!CVehicleMgr::IS_VALID_VEHICLE_MODEL(modelid))
 		return false;
+	ExtendedVehCompo* compo = ExtendedVehCompo::get();
+	ICore* core_ = compo->getCore();
 	CHECK_TYPE(attrib, TYPE_BYTE)
 
 	stHandlingEntry* mEntry = GetModelHandlingEntry(modelid);
@@ -526,7 +550,8 @@ bool GetDefaultHandling(uint16_t modelid, CHandlingAttrib attrib, float& ret)
 {
 	if (!CVehicleMgr::IS_VALID_VEHICLE_MODEL(modelid))
 		return false;
-
+	ExtendedVehCompo* compo = ExtendedVehCompo::get();
+	ICore* core_ = compo->getCore();
 	CHECK_TYPE(attrib, TYPE_FLOAT)
 
 	struct tHandlingData* pHandl = HandlingDefault::getDefaultModelHandling(modelid);
@@ -562,7 +587,8 @@ bool GetDefaultHandling(uint16_t modelid, CHandlingAttrib attrib, uint8_t& ret)
 {
 	if (!CVehicleMgr::IS_VALID_VEHICLE_MODEL(modelid))
 		return false;
-
+	ExtendedVehCompo* compo = ExtendedVehCompo::get();
+	ICore* core_ = compo->getCore();
 	CHECK_TYPE(attrib, TYPE_BYTE)
 
 	struct tHandlingData* pHandl = HandlingDefault::getDefaultModelHandling(modelid);
@@ -579,7 +605,10 @@ bool SetPlayerHandling(uint16_t playerid, CHandlingAttrib attrib, float value)
 {
 	if (!IS_VALID_PLAYERID(playerid) || !CanSetHandlingAttrib(attrib))
 		return false;
+	ExtendedVehCompo* compo = ExtendedVehCompo::get();
+	ICore* core_ = compo->getCore();
 	CHECK_TYPE(attrib, TYPE_FLOAT);
+
 	if (!IsValidHandlingValue(attrib, value))
 		return false;
 
@@ -593,11 +622,12 @@ bool SetPlayerHandling(uint16_t playerid, CHandlingAttrib attrib, float value)
 	mod.type = TYPE_FLOAT;
 	__addMod(&playerHandlings[playerid], attrib, mod);
 
-	if (ExtendedVehCompo::getCore()) {
+	if (compo)
+	{
 		struct CHandlingActionPacket p(ACTION_SET_PLAYER_HANDLING);
 		p.data.Write(playerid);
 		__WriteHandlingEntryToBitStream(&p.data, playerHandlings[playerid]);
-		IPlayer* player = ExtendedVehCompo::GetPlayerByID(playerid);
+		IPlayer* player = compo->GetPlayerByID(playerid);
 		if (player) {
 			player->sendPacket(Span<uint8_t>(p.data.GetData(), p.data.GetNumberOfBitsUsed()), 0, true);
 		}
@@ -623,11 +653,12 @@ bool SetPlayerHandling(uint16_t playerid, CHandlingAttrib attrib, unsigned int v
 	mod.type = TYPE_UINT;
 	__addMod(&playerHandlings[playerid], attrib, mod);
 
-	if (ExtendedVehCompo::getCore()) {
+	ExtendedVehCompo* compo = ExtendedVehCompo::get();
+	if (compo) {
 		struct CHandlingActionPacket p(ACTION_SET_PLAYER_HANDLING);
 		p.data.Write(playerid);
 		__WriteHandlingEntryToBitStream(&p.data, playerHandlings[playerid]);
-		IPlayer* player = ExtendedVehCompo::GetPlayerByID(playerid);
+		IPlayer* player = compo->GetPlayerByID(playerid);
 		if (player) {
 			player->sendPacket(Span<uint8_t>(p.data.GetData(), p.data.GetNumberOfBitsUsed()), 0, true);
 		}
@@ -639,6 +670,8 @@ bool SetPlayerHandling(uint16_t playerid, CHandlingAttrib attrib, uint8_t value)
 {
 	if (!IS_VALID_PLAYERID(playerid) || !CanSetHandlingAttrib(attrib))
 		return false;
+	ExtendedVehCompo* compo = ExtendedVehCompo::get();
+	ICore* core_ = compo->getCore();
 	CHECK_TYPE(attrib, TYPE_BYTE);
 	if (!IsValidHandlingValue(attrib, value))
 		return false;
@@ -653,11 +686,11 @@ bool SetPlayerHandling(uint16_t playerid, CHandlingAttrib attrib, uint8_t value)
 	mod.type = TYPE_BYTE;
 	__addMod(&playerHandlings[playerid], attrib, mod);
 
-	if (ExtendedVehCompo::getCore()) {
+	if (compo) {
 		struct CHandlingActionPacket p(ACTION_SET_PLAYER_HANDLING);
 		p.data.Write(playerid);
 		__WriteHandlingEntryToBitStream(&p.data, playerHandlings[playerid]);
-		IPlayer* player = ExtendedVehCompo::GetPlayerByID(playerid);
+		IPlayer* player = compo->GetPlayerByID(playerid);
 		if (player) {
 			player->sendPacket(Span<uint8_t>(p.data.GetData(), p.data.GetNumberOfBitsUsed()), 0, true);
 		}
@@ -672,10 +705,11 @@ bool ResetPlayerHandling(uint16_t playerid)
 		return false;
 	playerHandlings.erase(it);
 
-	if (ExtendedVehCompo::getCore()) {
+	ExtendedVehCompo* compo = ExtendedVehCompo::get();
+	if (compo) {
 		struct CHandlingActionPacket p(ACTION_RESET_PLAYER_HANDLING);
 		p.data.Write(playerid);
-		IPlayer* player = ExtendedVehCompo::GetPlayerByID(playerid);
+		IPlayer* player = compo->GetPlayerByID(playerid);
 		if (player) {
 			player->sendPacket(Span<uint8_t>(p.data.GetData(), p.data.GetNumberOfBitsUsed()), 0, true);
 		}
@@ -688,6 +722,8 @@ bool GetPlayerHandling(uint16_t playerid, CHandlingAttrib attrib, float& ret)
 	auto it = playerHandlings.find(playerid);
 	if (it == playerHandlings.end())
 		return false;
+	ExtendedVehCompo* compo = ExtendedVehCompo::get();
+	ICore* core_ = compo->getCore();
 	CHECK_TYPE(attrib, TYPE_FLOAT);
 	void* ptr = GetHandlingAttribPtr(&it->second.handlingData, attrib);
 	if (!ptr)
@@ -716,6 +752,8 @@ bool GetPlayerHandling(uint16_t playerid, CHandlingAttrib attrib, uint8_t& ret)
 	auto it = playerHandlings.find(playerid);
 	if (it == playerHandlings.end())
 		return false;
+	ExtendedVehCompo* compo = ExtendedVehCompo::get();
+	ICore* core_ = compo->getCore();
 	CHECK_TYPE(attrib, TYPE_BYTE);
 	void* ptr = GetHandlingAttribPtr(&it->second.handlingData, attrib);
 	if (!ptr)
@@ -726,7 +764,8 @@ bool GetPlayerHandling(uint16_t playerid, CHandlingAttrib attrib, uint8_t& ret)
 
 bool ResetAll(uint16_t playerid)
 {
-	IPlayer* player = ExtendedVehCompo::GetPlayerByID(playerid);
+	ExtendedVehCompo* compo = ExtendedVehCompo::get();
+	IPlayer* player = compo->GetPlayerByID(playerid);
 	if (!player)
 		return false;
 
@@ -902,7 +941,9 @@ void SendCustomVehicleDestroyToPlayer(IPlayer& player, uint32_t modelId)
 
 void SendCustomVehicleDestroyToAll(uint32_t modelId)
 {
-	for (IPlayer* player : ExtendedVehCompo::getCore()->getPlayers().players()) {
+	ExtendedVehCompo* compo = ExtendedVehCompo::get();
+	ICore* core_ = compo->getCore();
+	for (IPlayer* player : core_->getPlayers().players()) {
 		SendCustomVehicleDestroyToPlayer(*player, modelId);
 	}
 }

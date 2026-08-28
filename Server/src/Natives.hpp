@@ -19,7 +19,7 @@ void RegisterNativeHooks()
 {
 	NativeHookManager::Instance().RegisterHookByName("CreateVehicle", [](AMX* amx, cell* params, NativeHook::amx_native_fn_t orig) -> cell {
 		ExtendedVehCompo* compo = ExtendedVehCompo::get();
-		auto core_ = compo->getCore();
+		ICore* core_ = compo->getCore();
 		if (core_) {
 			core_->logLn(LogLevel::Debug, "[ExtendedVeh] Hooked CreateVehicle");
 		}
@@ -32,7 +32,7 @@ void RegisterNativeHooks()
 
 	NativeHookManager::Instance().RegisterHookByName("AddStaticVehicle", [](AMX* amx, cell* params, NativeHook::amx_native_fn_t orig) -> cell {
 		ExtendedVehCompo* compo = ExtendedVehCompo::get();
-		auto core_ = compo->getCore();
+		ICore* core_ = compo->getCore();
 		if (core_) {
 			core_->logLn(LogLevel::Debug, "[ExtendedVeh] Hooked AddStaticVehicle");
 		}
@@ -45,7 +45,7 @@ void RegisterNativeHooks()
 
 	NativeHookManager::Instance().RegisterHookByName("AddStaticVehicleEx", [](AMX* amx, cell* params, NativeHook::amx_native_fn_t orig) -> cell {
 		ExtendedVehCompo* compo = ExtendedVehCompo::get();
-		auto core_ = compo->getCore();
+		ICore* core_ = compo->getCore();
 		if (core_) {
 			core_->logLn(LogLevel::Debug, "[ExtendedVeh] Hooked AddStaticVehicleEx");
 		}
@@ -58,7 +58,7 @@ void RegisterNativeHooks()
 
 	NativeHookManager::Instance().RegisterHookByName("DestroyVehicle", [](AMX* amx, cell* params, NativeHook::amx_native_fn_t orig) -> cell {
 		ExtendedVehCompo* compo = ExtendedVehCompo::get();
-		auto core_ = compo->getCore();
+		ICore* core_ = compo->getCore();
 		if (core_) {
 			core_->logLn(LogLevel::Debug, "[ExtendedVeh] Hooked DestroyVehicle");
 		}

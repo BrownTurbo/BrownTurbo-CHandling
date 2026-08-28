@@ -25,7 +25,8 @@ bool Actions::Process(CHandlingAction id, NetworkBitStream& bs, IPlayer& player)
 		if (compat_ver >= EXTVEH_COMPAT_VERSION) {
 			pkt.data.Write(true);
 			gPlayers[playerid].setHasCHandling();
-			auto core_ = ExtendedVehCompo::getCore();
+			ExtendedVehCompo* compo = ExtendedVehCompo::get();
+			ICore* core_ = compo->getCore();
 			if (core_) {
 				core_->logLn(LogLevel::Message, "[ExtendedVeh] Player %d reports having chandling plugin", playerid);
 			}
