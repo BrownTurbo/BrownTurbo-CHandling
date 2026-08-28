@@ -24,9 +24,9 @@ if(DEFINED CMAKE_GENERATOR)
     endif()
 endif()
 if (NOT DEFINED CMAKE_CXX_STANDARD)
-    set(CMAKE_CXX_STANDARD 17)
-elseif (CMAKE_CXX_STANDARD LESS 17)
-    message(FATAL_ERROR "CMAKE_CXX_STANDARD has been set to '${CMAKE_CXX_STANDARD}' which is lower than the minimum required standard (c++17).")
+    set(CMAKE_CXX_STANDARD 20)
+elseif (CMAKE_CXX_STANDARD LESS 20)
+    message(FATAL_ERROR "CMAKE_CXX_STANDARD has been set to '${CMAKE_CXX_STANDARD}' which is lower than the minimum required standard (c++20).")
 endif()
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
@@ -179,8 +179,11 @@ target_include_directories(RakNet
         $<INSTALL_INTERFACE:>
 )
 
-target_link_libraries(${COMPONENT_NAME_LOWERCASE} PRIVATE PawnNatives OMP-SDK SUBHOOK AMX RakNet)
+find_package(ZLIB REQUIRED)
+
+target_link_libraries(${COMPONENT_NAME_LOWERCASE} PRIVATE PawnNatives OMP-SDK SUBHOOK AMX RakNet ZLIB::ZLIB)
 target_link_options(${COMPONENT_NAME_LOWERCASE} PRIVATE $<$<CONFIG:Release>:/DEBUG /OPT:REF /OPT:ICF>)
+target_compile_options(${COMPONENT_NAME_LOWERCASE} PRIVATE /p:VcpkgEnableManifest=true)
 
 if(DEFINED UNIX)
     add_definitions(-DLINUX -DENABLE_BINRELOC)
@@ -255,7 +258,6 @@ elseif(DEFINED WIN32)
         -DHAVE_STDINT_H
         -DNOGDI # disables ERROR define (conflicts with log level)
 		-D_WINSOCK_DEPRECATED_NO_WARNINGS
-		-D_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING
 		-DWin32_LEAN_AND_MEAN
         -DWIN32_LEAN_AND_MEAN
 		-D_CRT_DECLARE_NONSTDC_NAMES
@@ -293,5 +295,5 @@ add_definitions(-DSUBHOOK_STATIC -DSUBHOOK_IMPLEMENTATION)
 add_definitions(-DHAVE_STDINT_H=1 -DPAWN_CELL_SIZE=64)
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++20")
 endif()

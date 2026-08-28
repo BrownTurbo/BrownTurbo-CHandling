@@ -1,0 +1,24 @@
+{
+  "version": 3,
+  "configurePresets": [
+    {
+      "name": "vcpkg",
+      "generator": "Visual Studio 18 2026",
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+        "VCPKG_TARGET_TRIPLET": "x86-windows",
+        "VCPKG_MANIFEST_MODE": "ON",
+        "CMAKE_PREFIX_PATH": "${sourceDir}/vcpkg_installed/x86-windows"
+      },
+      "architecture": "Win32"
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "default",
+      "configurePreset": "vcpkg",
+      "nativeToolOptions": ["/p:VcpkgEnableManifest=true"]
+    }
+  ]
+}

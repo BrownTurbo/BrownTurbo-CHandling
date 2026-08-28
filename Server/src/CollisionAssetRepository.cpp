@@ -1,6 +1,7 @@
 #include "CollisionAssetRepository.h"
 
 #include <algorithm>
+#include <windows.h>
 #include <bcrypt.h>
 #include <cctype>
 #include <cstring>
@@ -12,7 +13,7 @@
 
 #pragma comment(lib, "bcrypt.lib")
 
-namespace scv::server::collision
+namespace CustomVeh::collision
 {
     namespace
     {
@@ -298,8 +299,7 @@ namespace scv::server::collision
         return true;
     }
 
-    CollisionAssetRepository::Result
-    CollisionAssetRepository::ParseRecords(
+    CustomVeh::collision::Result CollisionAssetRepository::ParseRecords(
         const std::vector<std::uint8_t>&
             bytes,
         std::vector<RecordInfo>&
@@ -479,9 +479,9 @@ namespace scv::server::collision
         BCRYPT_HASH_HANDLE
             hash = nullptr;
 
-        DWORD objectLength = 0;
-        DWORD digestLength = 0;
-        DWORD returned = 0;
+        unsigned long objectLength = 0;
+        unsigned long digestLength = 0;
+        unsigned long returned = 0;
 
         if (BCryptOpenAlgorithmProvider(
                 &algorithm,
@@ -498,7 +498,7 @@ namespace scv::server::collision
         if (BCryptGetProperty(
                 algorithm,
                 BCRYPT_OBJECT_LENGTH,
-                reinterpret_cast<PUCHAR>(
+                reinterpret_cast<unsigned char*>(
                     &objectLength),
                 sizeof(objectLength),
                 &returned,
@@ -517,7 +517,7 @@ namespace scv::server::collision
         if (BCryptGetProperty(
                 algorithm,
                 BCRYPT_HASH_LENGTH,
-                reinterpret_cast<PUCHAR>(
+                reinterpret_cast<unsigned char*>(
                     &digestLength),
                 sizeof(digestLength),
                 &returned,
@@ -591,7 +591,7 @@ namespace scv::server::collision
             if (BCryptHashData(
                     hash,
                     buffer.data(),
-                    static_cast<ULONG>(
+                    static_cast<unsigned long>(
                         count),
                     0) < 0)
             {
@@ -612,7 +612,7 @@ namespace scv::server::collision
         if (BCryptFinishHash(
                 hash,
                 outHash.bytes.data(),
-                static_cast<ULONG>(
+                static_cast<unsigned long>(
                     outHash.bytes.size()),
                 0) < 0)
         {
@@ -658,8 +658,7 @@ namespace scv::server::collision
         return stream.str();
     }
 
-    CollisionAssetRepository::Result
-    CollisionAssetRepository::ValidateFile(
+    CustomVeh::collision::Result CollisionAssetRepository::ValidateFile(
         const std::filesystem::path& path,
         Metadata& outMetadata,
         std::vector<RecordInfo>&

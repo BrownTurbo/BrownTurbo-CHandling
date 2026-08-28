@@ -10,7 +10,7 @@
 #include <unordered_map>
 #include <vector>
 
-namespace scv::server::collision
+namespace CustomVeh::collision
 {
     using CustomModelId = std::uint32_t;
 
