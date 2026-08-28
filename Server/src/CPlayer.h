@@ -4,8 +4,7 @@
 #define MAX_PLAYERS 1000
 #endif
 
-class CPlayer
-{
+class CPlayer {
 private:
 	bool _hasCHandling = false;
 

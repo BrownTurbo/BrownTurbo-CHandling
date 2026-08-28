@@ -29,7 +29,7 @@ function(ListFilesInSubmodule directory_path pattern)
     get_filename_component(_baseDir "${directory_path}" ABSOLUTE)
 
     # Use native CMake globbing (no PowerShell / Bash required)
-    file(GLOB_RECURSE _matchedFiles RELATIVE "${_baseDir}" "${_baseDir}/${pattern}")
+    file(GLOB_RECURSE _matchedFiles CONFIGURE_DEPENDS RELATIVE "${_baseDir}" "${_baseDir}/${pattern}")
 
     unset(_Temp)
     foreach(_relFile IN LISTS _matchedFiles)
@@ -142,7 +142,7 @@ set_target_properties(${PROJECT_NAME}
 )
 
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_23)
-target_compile_options(${PROJECT_NAME} PRIVATE /TP /std:c++latest /Zc:offsetof- /W3 /wd4073 /sdl- /Y-)
+target_compile_options(${PROJECT_NAME} PRIVATE /TP /std:c++latest /Zc:offsetof- /W3 /wd4073 /sdl- /Y- /p:VcpkgEnableManifest=true)
 target_compile_definitions(${PROJECT_NAME} PRIVATE _SILENCE_CXX23_ISSUES VALIDATE_OFFSETS=0)
 
 target_include_directories(${PROJECT_NAME} PRIVATE
@@ -178,6 +178,10 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 	TARGET_NAME_DEBUG   "plugin_d"
 )
 
+find_package(imgui CONFIG REQUIRED)
+find_package(ZLIB REQUIRED)
+find_package(nlohmann_json CONFIG REQUIRED)
+
 target_link_libraries(${PROJECT_NAME} PRIVATE
     $<$<CONFIG:Debug>:plugin_d>
     $<$<CONFIG:Release>:plugin>
@@ -186,6 +190,10 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     sampapi
     rakhook
 	trickedTargets
+	imgui::imgui
+	d3d9
+	ZLIB::ZLIB
+	nlohmann_json::nlohmann_json
 )
 
 function(force_dynamic_runtime_on_all_targets dir)

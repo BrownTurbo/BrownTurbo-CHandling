@@ -3,8 +3,7 @@
 
 CHandlingAttribType GetHandlingAttributeType(CHandlingAttrib attribute)
 {
-	switch (attribute)
-	{
+	switch (attribute) {
 	case HANDL_FMASS:
 	case HANDL_FTURNMASS:
 	case HANDL_FDRAGMULTIPLIER:
@@ -54,13 +53,11 @@ CHandlingAttribType GetHandlingAttributeType(CHandlingAttrib attribute)
 
 bool CanSetHandlingAttrib(CHandlingAttrib attribute)
 {
-	switch (attribute)
-	{
+	switch (attribute) {
 	case HANDL_UIDENTIFIER:
 	case HANDL_ANIMGROUP:
 	case HANDL_UIMONETARYVALUE:
 		return false;
-
 	}
 	return true;
 }
@@ -70,8 +67,7 @@ bool IsValidHandlingValue(CHandlingAttrib attribute, float value)
 	if (GetHandlingAttributeType(attribute) != TYPE_FLOAT)
 		return false;
 
-	switch (attribute)
-	{
+	switch (attribute) {
 	case HANDL_FMASS:
 		return 1.0 <= value && value <= 50000.0;
 	case HANDL_FTURNMASS:
@@ -125,8 +121,7 @@ bool IsValidHandlingValue(CHandlingAttrib attribute, uint8_t value)
 	if (GetHandlingAttributeType(attribute) != TYPE_BYTE)
 		return false;
 
-	switch (attribute)
-	{
+	switch (attribute) {
 	case HANDL_BABS:
 		return value == 1 || value == 0;
 	case HANDL_NPERCENTSUBMERGED:
@@ -146,11 +141,9 @@ bool IsValidHandlingValue(CHandlingAttrib attribute, uint8_t value)
 	return false;
 }
 
-
-void* GetHandlingAttribPtr(struct tHandlingData *handling, CHandlingAttrib attrib)
+void* GetHandlingAttribPtr(struct tHandlingData* handling, CHandlingAttrib attrib)
 {
-	switch (attrib)
-	{
+	switch (attrib) {
 	case HANDL_FMASS:
 		return &handling->m_fMass;
 	case HANDL_FTURNMASS:
@@ -226,7 +219,6 @@ void* GetHandlingAttribPtr(struct tHandlingData *handling, CHandlingAttrib attri
 		return &handling->m_nHandlingFlags;
 	case HANDL_MODELFLAGS:
 		return &handling->m_nModelFlags;
-
 	}
-	return  nullptr;
+	return nullptr;
 }

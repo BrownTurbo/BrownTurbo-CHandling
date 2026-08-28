@@ -1,0 +1,9 @@
+{
+    "cmake.sourceDirectory": "M:/MyJob/BrownTurbo-CHandling/Server",
+    "C_Cpp.default.compilerPath": "cl.exe",
+    "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
+    "editor.codeActions.triggerOnFocusChange": true,
+    "editor.formatOnSaveMode": "modificationsIfAvailable",
+    "editor.formatOnSave": false,
+    "terminal.integrated.tabStopWidth": 4
+}

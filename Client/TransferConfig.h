@@ -1,0 +1,130 @@
+#pragma once
+#include <windows.h>
+#include <filesystem>
+#include <fstream>
+#include <shlobj.h>
+#include <sstream>
+#include <string>
+#include <unordered_map>
+
+namespace fs = std::filesystem;
+
+class TransferConfig {
+public:
+	static TransferConfig& Instance()
+	{
+		static TransferConfig instance;
+		return instance;
+	}
+
+	void Load()
+	{
+		fs::path path = ConfigPath();
+		if (!fs::exists(path)) {
+			WriteDefaults(path);
+		}
+
+		std::ifstream file(path);
+		if (!file.is_open())
+			return;
+
+		std::string line;
+		while (std::getline(file, line)) {
+			if (auto semi = line.find(';'); semi != std::string::npos)
+				line.resize(semi);
+			if (auto hash = line.find('#'); hash != std::string::npos)
+				line.resize(hash);
+
+			auto eq = line.find('=');
+			if (eq == std::string::npos)
+				continue;
+
+			std::string key = Trim(line.substr(0, eq));
+			std::string value = Trim(line.substr(eq + 1));
+			if (!key.empty())
+				m_values[key] = value;
+		}
+
+		expireTimeMs = GetInt("ExpireTimeMs", expireTimeMs);
+		maxCacheSizeMB = GetInt("MaxCacheSizeMB", maxCacheSizeMB);
+		cacheEnabled = GetBool("CacheEnabled", cacheEnabled);
+		maxConcurrentTransfers = static_cast<int>(
+			GetInt("MaxConcurrentTransfers", maxConcurrentTransfers));
+		showTransferWindow = GetBool("ShowTransferWindowByDefault", showTransferWindow);
+		toggleKey = static_cast<int>(GetInt("ToggleKeyVK", toggleKey));
+	}
+
+	// {Documents}\GTA San Andreas User Files\SAMP\cache
+	static fs::path CacheDirectory()
+	{
+		char documentsPath[MAX_PATH] = { 0 };
+		if (SUCCEEDED(SHGetFolderPathA(nullptr, CSIDL_PERSONAL, nullptr, 0,
+				documentsPath))) {
+			fs::path dir = fs::path(documentsPath) / "GTA San Andreas User Files" / "SAMP" / "cache";
+			std::error_code ec;
+			fs::create_directories(dir, ec);
+			return dir;
+		}
+		return "samp_model_cache";
+	}
+
+	long long expireTimeMs = 24LL * 60 * 60 * 1000; // 24h
+	int maxCacheSizeMB = 512;
+	bool cacheEnabled = true;
+	int maxConcurrentTransfers = 4;
+	bool showTransferWindow = false;
+	int toggleKey = 0x78; // VK_F9
+
+private:
+	TransferConfig() = default;
+
+	static fs::path ConfigPath()
+	{
+		return CacheDirectory().parent_path() / "transfer_config.ini";
+	}
+
+	void WriteDefaults(const fs::path& path)
+	{
+		std::ofstream file(path);
+		if (!file.is_open())
+			return;
+		file << "; BrownTurbo-CHandling model transfer cache settings\n"
+			 << "ExpireTimeMs=86400000\n"
+			 << "MaxCacheSizeMB=512\n"
+			 << "CacheEnabled=1\n"
+			 << "MaxConcurrentTransfers=4\n"
+			 << "ShowTransferWindowByDefault=0\n"
+			 << "ToggleKeyVK=120\n"; // VK_F9
+	}
+
+	static std::string Trim(std::string s)
+	{
+		size_t start = s.find_first_not_of(" \t\r\n");
+		size_t end = s.find_last_not_of(" \t\r\n");
+		if (start == std::string::npos)
+			return "";
+		return s.substr(start, end - start + 1);
+	}
+
+	long long GetInt(const std::string& key, long long fallback) const
+	{
+		auto it = m_values.find(key);
+		if (it == m_values.end())
+			return fallback;
+		try {
+			return std::stoll(it->second);
+		} catch (...) {
+			return fallback;
+		}
+	}
+
+	bool GetBool(const std::string& key, bool fallback) const
+	{
+		auto it = m_values.find(key);
+		if (it == m_values.end())
+			return fallback;
+		return it->second == "1" || it->second == "true" || it->second == "True";
+	}
+
+	std::unordered_map<std::string, std::string> m_values;
+};

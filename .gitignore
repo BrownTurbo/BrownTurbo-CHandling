@@ -4,3 +4,5 @@ build/
 ~.dev/
 **/bin/
 bin/
+**/vcpkg_installed/
+vcpkg_installed/

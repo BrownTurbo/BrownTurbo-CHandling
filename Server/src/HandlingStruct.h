@@ -2,8 +2,7 @@
 #include <cstdint>
 /* game structures */
 
-struct  tTransmissionGear
-{
+struct tTransmissionGear {
 	float m_fMaxVelocity;
 	float m_fChangeUpVelocity;
 	float m_fChangeDownVelocity;
@@ -16,13 +15,13 @@ public:
 	unsigned char m_nEngineType; // P/D/E
 	unsigned char m_nNumberOfGears; // 1 to 6
 	char field_4B;
-	unsigned int  m_nHandlingFlags;
-	float         m_fEngineAcceleration; // 0.1 to 10.0
-	float         m_fEngineInertia; // 0.0 to 50.0
-	float         m_fMaxGearVelocity; // 5.0 to 150.0
+	unsigned int m_nHandlingFlags;
+	float m_fEngineAcceleration; // 0.1 to 10.0
+	float m_fEngineInertia; // 0.0 to 50.0
+	float m_fMaxGearVelocity; // 5.0 to 150.0
 	int field_5C;
-	float         m_fMinGearVelocity;
-	float         m_fCurrentSpeed;
+	float m_fMinGearVelocity;
+	float m_fCurrentSpeed;
 
 	/*cTransmission();
 	void InitGearRatios();
@@ -106,41 +105,40 @@ enum eVehicleHandlingModelFlags : unsigned int {
 	VEHICLE_HANDLING_MODEL_IS_HATCHBACK = 0x80000000
 };
 
-struct CVector
-{
+struct CVector {
 	float fX;
 	float fY;
 	float fZ;
 };
 
 struct tHandlingData {
-	int           m_iIndex;
-	float         m_fMass; // 1.0 to 50000.0
+	int m_iIndex;
+	float m_fMass; // 1.0 to 50000.0
 	float field_8;
-	float         m_fTurnMass;
-	float         m_fDragMult;
-	struct CVector       m_vecCentreOfMass; // x, y, z - 1.0 to 50000.0
+	float m_fTurnMass;
+	float m_fDragMult;
+	struct CVector m_vecCentreOfMass; // x, y, z - 1.0 to 50000.0
 	uint8_t m_nPercentSubmerged; // 10 to 120 (> 100% vehicle sinks)
-	float         m_fBuoyancyConstant;
-	float         m_fTractionMultiplier; // 0.5 to 2.0
+	float m_fBuoyancyConstant;
+	float m_fTractionMultiplier; // 0.5 to 2.0
 	cTransmission m_transmissionData;
-	float         m_fBrakeDeceleration; // 0.1 to 10.0
-	float         m_fBrakeBias; // 0.0 > x > 1.0
-	char          m_bABS; // 0/1
+	float m_fBrakeDeceleration; // 0.1 to 10.0
+	float m_fBrakeBias; // 0.0 > x > 1.0
+	char m_bABS; // 0/1
 	char field_9D;
 	char field_9E;
 	char field_9F;
-	float         m_fSteeringLock; // 10.0 to 40.0
-	float         m_fTractionLoss;
-	float         m_fTractionBias;
-	float         m_fSuspensionForceLevel; // not [L/M/H]
-	float         m_fSuspensionDampingLevel; // not [L/M/H]
-	float         m_fSuspensionHighSpdComDamp; // often zero - 200.0 or more for bouncy vehicles
-	float         m_fSuspensionUpperLimit;
-	float         m_fSuspensionLowerLimit;
-	float         m_fSuspensionBiasBetweenFrontAndRear;
-	float         m_fSuspensionAntiDiveMultiplier;
-	float         m_fCollisionDamageMultiplier; // 0.2 to 5.0
+	float m_fSteeringLock; // 10.0 to 40.0
+	float m_fTractionLoss;
+	float m_fTractionBias;
+	float m_fSuspensionForceLevel; // not [L/M/H]
+	float m_fSuspensionDampingLevel; // not [L/M/H]
+	float m_fSuspensionHighSpdComDamp; // often zero - 200.0 or more for bouncy vehicles
+	float m_fSuspensionUpperLimit;
+	float m_fSuspensionLowerLimit;
+	float m_fSuspensionBiasBetweenFrontAndRear;
+	float m_fSuspensionAntiDiveMultiplier;
+	float m_fCollisionDamageMultiplier; // 0.2 to 5.0
 	union {
 		eVehicleHandlingModelFlags m_nModelFlags;
 		struct {
@@ -211,9 +209,9 @@ struct tHandlingData {
 			unsigned int m_bSwingingChassis : 1;
 		};
 	};
-	float              m_fSeatOffsetDistance; // // ped seat position offset towards centre of car
-	unsigned int       m_nMonetaryValue; // 1 to 100000
+	float m_fSeatOffsetDistance; // // ped seat position offset towards centre of car
+	unsigned int m_nMonetaryValue; // 1 to 100000
 	eVehicleLightsSize m_nFrontLights;
 	eVehicleLightsSize m_nRearLights;
-	unsigned char      m_nAnimGroup;
+	unsigned char m_nAnimGroup;
 };
