@@ -1,5 +1,8 @@
 #pragma once
 
+#include <mutex>
+#include <unordered_map>
+
 class CustomVehicleBindingManager {
 public:
 	struct Binding {

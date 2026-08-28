@@ -3,7 +3,7 @@
 #include "ModelCache.h"
 
 #include <windows.h>
-#include <RakNet/bitstream.hpp>
+#include <RakNet/BitStream.h>
 #include <bcrypt.h>
 #pragma comment(lib, "bcrypt.lib")
 #include <zlib.h>
