@@ -147,7 +147,8 @@ private:
 		CTxdStore::SetCurrentTxd(txdSlot);
 
 		RwMemory dffMem { pending->dff.data(), static_cast<RwUInt32>(pending->dff.size()) };
-		if (RwStream* dffStream = RwStreamOpen(rwSTREAMMEMORY, rwSTREAMREAD, &dffMem)) {
+		RwStream* dffStream = RwStreamOpen(rwSTREAMMEMORY, rwSTREAMREAD, &dffMem);
+		if (dffStream != nullptr) {
 			if (RwStreamFindChunk(dffStream, rwID_CLUMP, nullptr, nullptr)) {
 				RpClump* pClump = RpClumpStreamRead(dffStream);
 				if (pClump) {

@@ -76,7 +76,7 @@ public:
 	void onPoolEntryDestroyed(IVehicle& vehicle) override;
 
 	ICore*& getCore();
-	ExtendedVehCompo*& get();
+	static ExtendedVehCompo*& get();
 
 	IVehicle* GetVehicleByID(int vehicleid);
 	bool IsValidVehicle(int vehicleid);
