@@ -93,7 +93,11 @@ SCRIPT_API(GetHandlingAttribType, cell(int attr))
 SCRIPT_API(IsPlayerUsingCHandling, bool(IPlayer& player))
 {
 	ExtendedVehCompo* compo = ExtendedVehCompo::get();
+	if (!compo)
+		return false;
 	ICore* core_ = compo->getCore();
+	if (!core_)
+		return false;
 	const auto& players_ = core_->getPlayers().players();
 	int playerid = player.getID();
 	for (auto it = players_.begin(); it != players_.end(); ++it)
@@ -338,7 +342,7 @@ SCRIPT_API(IsCustomVehicleModel, bool(int modelid))
 SCRIPT_API(IsVehicleCustom, bool(int vehicleid))
 {
 	ExtendedVehCompo* compo = ExtendedVehCompo::get();
-	if (compo)
+	if (!compo)
 		return false;
 	IVehicle* vehicle = compo->GetVehicleByID(vehicleid);
 	if (!vehicle)
@@ -350,7 +354,7 @@ SCRIPT_API(IsVehicleCustom, bool(int vehicleid))
 SCRIPT_API(BindVehicleModel, bool(int vehicleid, int customModelId))
 {
 	ExtendedVehCompo* compo = ExtendedVehCompo::get();
-	if (compo)
+	if (!compo)
 		return false;
 	IVehicle* vehicle = compo->GetVehicleByID(vehicleid);
 	if (!vehicle)
