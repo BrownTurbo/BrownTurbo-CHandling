@@ -131,6 +131,7 @@ if(DEFINED UNIX)
 target_compile_options(SUBHOOK PRIVATE -m32)
 target_link_options(SUBHOOK PRIVATE -m32)
 endif()
+add_compile_definitions(NOMINMAX WIN32_LEAN_AND_MEAN)
 target_compile_definitions(SUBHOOK PUBLIC
   SUBHOOK_IMPLEMENTATION
   SUBHOOK_SEPARATE_SOURCE_FILES

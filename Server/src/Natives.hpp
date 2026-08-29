@@ -10,74 +10,94 @@
 #include "HandlingManager.h"
 #include "Hooks.hpp"
 #include "extendedveh.h"
+#include "CustomVehicleBindingRegistry.h"
 #include <Server/Components/Pawn/pawn.hpp>
 #include <Server/Components/Pawn/Impl/pawn_natives.hpp>
 
 using namespace NativeHook;
 
+namespace FuncHook
+{
+inline cell OnCreateVehicleHook(AMX* amx, cell* params, NativeHook::amx_native_fn_t orig)
+{
+	ExtendedVehCompo* compo = ExtendedVehCompo::get();
+	if (compo)
+	{
+		ICore* core_ = compo->getCore();
+		if (core_)
+		{
+			core_->logLn(LogLevel::Debug, "[ExtendedVeh] Hooked CreateVehicle");
+		}
+	}
+	const int vehicleid = static_cast<int>(orig(amx, params));
+	if (vehicleid != INVALID_VEHICLE_ID)
+	{
+		HandlingMgr::OnCreateVehicle(vehicleid);
+	}
+	return static_cast<cell>(vehicleid);
+}
+
+inline cell OnAddStaticVehicleHook(AMX* amx, cell* params, NativeHook::amx_native_fn_t orig)
+{
+	ExtendedVehCompo* compo = ExtendedVehCompo::get();
+	if (compo)
+	{
+		ICore* core_ = compo->getCore();
+		if (core_)
+		{
+			core_->logLn(LogLevel::Debug, "[ExtendedVeh] Hooked AddStaticVehicle");
+		}
+	}
+	const int vehicleid = static_cast<int>(orig(amx, params));
+	if (vehicleid != INVALID_VEHICLE_ID)
+	{
+		HandlingMgr::OnCreateVehicle(vehicleid);
+	}
+	return static_cast<cell>(vehicleid);
+}
+
+inline cell OnAddStaticVehicleExHook(AMX* amx, cell* params, NativeHook::amx_native_fn_t orig)
+{
+	ExtendedVehCompo* compo = ExtendedVehCompo::get();
+	if (compo)
+	{
+		ICore* core_ = compo->getCore();
+		if (core_)
+		{
+			core_->logLn(LogLevel::Debug, "[ExtendedVeh] Hooked AddStaticVehicleEx");
+		}
+	}
+	const int vehicleid = static_cast<int>(orig(amx, params));
+	if (vehicleid != INVALID_VEHICLE_ID)
+	{
+		HandlingMgr::OnCreateVehicle(vehicleid);
+	}
+	return static_cast<cell>(vehicleid);
+}
+
+inline cell OnDestroyVehicleHook(AMX* amx, cell* params, NativeHook::amx_native_fn_t orig)
+{
+	ExtendedVehCompo* compo = ExtendedVehCompo::get();
+	if (compo)
+	{
+		ICore* core_ = compo->getCore();
+		if (core_)
+		{
+			core_->logLn(LogLevel::Debug, "[ExtendedVeh] Hooked DestroyVehicle");
+		}
+	}
+	return orig(amx, params);
+}
+}
+
 inline void RegisterNativeHooks()
 {
 	auto& hooks = NativeHookManager::Instance();
-	hooks.RegisterHookByName("CreateVehicle", [](AMX* amx, cell* params, NativeHook::amx_native_fn_t orig) -> cell {
-		ExtendedVehCompo* compo = ExtendedVehCompo::get();
-		if (!compo)
-		{
-			ICore* core_ = compo->getCore();
-			if (core_) {
-				core_->logLn(LogLevel::Debug, "[ExtendedVeh] Hooked CreateVehicle");
-			}
-		}
-		int vehicleid = orig(amx, params);
-		if (vehicleid != INVALID_VEHICLE_ID) {
-			HandlingMgr::OnCreateVehicle(vehicleid);
-		}
-		return static_cast<cell>(vehicleid);
-	});
 
-	hooks.RegisterHookByName("AddStaticVehicle", [](AMX* amx, cell* params, NativeHook::amx_native_fn_t orig) -> cell {
-		ExtendedVehCompo* compo = ExtendedVehCompo::get();
-		if (!compo)
-		{
-			ICore* core_ = compo->getCore();
-			if (core_) {
-				core_->logLn(LogLevel::Debug, "[ExtendedVeh] Hooked AddStaticVehicle");
-			}
-		}
-		int vehicleid = orig(amx, params);
-		if (vehicleid != INVALID_VEHICLE_ID) {
-			HandlingMgr::OnCreateVehicle(vehicleid);
-		}
-		return static_cast<cell>(vehicleid);
-	});
-
-	hooks.RegisterHookByName("AddStaticVehicleEx", [](AMX* amx, cell* params, NativeHook::amx_native_fn_t orig) -> cell {
-		ExtendedVehCompo* compo = ExtendedVehCompo::get();
-		if (!compo)
-		{
-			ICore* core_ = compo->getCore();
-			if (core_) {
-				core_->logLn(LogLevel::Debug, "[ExtendedVeh] Hooked AddStaticVehicleEx");
-			}
-		}
-		int vehicleid = orig(amx, params);
-		if (vehicleid != INVALID_VEHICLE_ID) {
-			HandlingMgr::OnCreateVehicle(vehicleid);
-		}
-		return static_cast<cell>(vehicleid);
-	});
-
-	hooks.RegisterHookByName("DestroyVehicle", [](AMX* amx, cell* params, NativeHook::amx_native_fn_t orig) -> cell {
-		ExtendedVehCompo* compo = ExtendedVehCompo::get();
-		if (!compo)
-		{
-			ICore* core_ = compo->getCore();
-			if (core_) {
-				core_->logLn(LogLevel::Debug, "[ExtendedVeh] Hooked DestroyVehicle");
-			}
-		}
-		int ret = orig(amx, params);
-		return static_cast<cell>(ret);
-	});
+	hooks.RegisterHookByName("CreateVehicle", &FuncHook::OnCreateVehicleHook);
+	hooks.RegisterHookByName("AddStaticVehicle", &FuncHook::OnAddStaticVehicleHook);
+	hooks.RegisterHookByName("AddStaticVehicleEx", &FuncHook::OnAddStaticVehicleExHook);
+	hooks.RegisterHookByName("DestroyVehicle", &FuncHook::OnDestroyVehicleHook);
 }
 
 // Vehicle handling related funcs
