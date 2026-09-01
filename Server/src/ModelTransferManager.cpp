@@ -165,7 +165,7 @@ void OnRequestFile(IPlayer& player, uint32_t modelId, ModelFileKind kind)
 		return;
 
 	const CachedFile* cached = GetOrLoadCache(modelId, kind);
-	ExtendedVehCompo* compo;
+	ExtendedVehCompo* compo = ExtendedVehCompo::get();
 	ICore* core = compo->getCore();
 
 	if (!cached) {
@@ -173,7 +173,7 @@ void OnRequestFile(IPlayer& player, uint32_t modelId, ModelFileKind kind)
 		cancel.data.Write(modelId);
 		cancel.data.Write(static_cast<uint8_t>(kind));
 		player.sendPacket(
-			Span<uint8_t>(cancel.data.GetData(), cancel.data.GetNumberOfBitsUsed()),
+			Span<uint8_t>(cancel.data.GetData(), cancel.data.GetNumberOfBytesUsed()),
 			kFileTransferChannel, true);
 		if (core)
 			core->logLn(LogLevel::Warning,
@@ -197,7 +197,7 @@ void OnRequestFile(IPlayer& player, uint32_t modelId, ModelFileKind kind)
 	begin.data.Write(cached->sha256Hex.c_str(),
 		static_cast<int>(cached->sha256Hex.size()) + 1); // NUL-terminated
 	player.sendPacket(
-		Span<uint8_t>(begin.data.GetData(), begin.data.GetNumberOfBitsUsed()),
+		Span<uint8_t>(begin.data.GetData(), begin.data.GetNumberOfBytesUsed()),
 		kFileTransferChannel, true);
 
 	ActiveTransfer transfer;
@@ -235,7 +235,7 @@ void ProcessTick()
 	if (g_activeTransfers.empty())
 		return;
 
-	ExtendedVehCompo* compo;
+	ExtendedVehCompo* compo = ExtendedVehCompo::get();
 	ICore* core = compo->getCore();
 	if (!core)
 		return;
@@ -268,7 +268,7 @@ void ProcessTick()
 				reinterpret_cast<const char*>(cached->compressed.data() + offset),
 				chunkLen);
 			player->sendPacket(Span<uint8_t>(chunkPkt.data.GetData(),
-								   chunkPkt.data.GetNumberOfBitsUsed()),
+								   chunkPkt.data.GetNumberOfBytesUsed()),
 				kFileTransferChannel, true);
 
 			++transfer.nextChunkIndex;
@@ -280,7 +280,7 @@ void ProcessTick()
 			end.data.Write(transfer.modelId);
 			end.data.Write(static_cast<uint8_t>(transfer.kind));
 			player->sendPacket(
-				Span<uint8_t>(end.data.GetData(), end.data.GetNumberOfBitsUsed()),
+				Span<uint8_t>(end.data.GetData(), end.data.GetNumberOfBytesUsed()),
 				kFileTransferChannel, true);
 			// done
 		} else {

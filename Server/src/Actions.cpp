@@ -30,12 +30,12 @@ bool Actions::Process(CHandlingAction id, NetworkBitStream& bs, IPlayer& player)
 			if (core_) {
 				core_->logLn(LogLevel::Message, "[ExtendedVeh] Player %d reports having chandling plugin", playerid);
 			}
-			player.sendPacket(Span<uint8_t>(pkt.data.GetData(), pkt.data.GetNumberOfBitsUsed()), 0, false);
+			player.sendPacket(Span<uint8_t>(pkt.data.GetData(), pkt.data.GetNumberOfBytesUsed()), 0, false);
 			HandlingMgr::OnPlayerConnect(player);
 			return true;
 		} else {
 			pkt.data.Write(false);
-			player.sendPacket(Span<uint8_t>(pkt.data.GetData(), pkt.data.GetNumberOfBitsUsed()), 0, false);
+			player.sendPacket(Span<uint8_t>(pkt.data.GetData(), pkt.data.GetNumberOfBytesUsed()), 0, false);
 			return true;
 		}
 		return true;
@@ -48,10 +48,24 @@ bool Actions::Process(CHandlingAction id, NetworkBitStream& bs, IPlayer& player)
 		for (int i = 0; i < count; ++i) {
 			CHandlingAttrib attrib;
 			CHandlingAttribType type;
-			bs.Read(attrib);
-			bs.Read(type);
+			if (!bs.Read(attrib) || !bs.Read(type))
+				return false;
+
+			if (type == TYPE_FLOAT) {
+				float v;
+				if (bs.Read(v)) HandlingMgr::SetPlayerHandling(playerId, attrib, v);
+			} else if (type == TYPE_UINT) {
+				unsigned int v;
+				if (bs.Read(v)) HandlingMgr::SetPlayerHandling(playerId, attrib, v);
+			} else if (type == TYPE_BYTE) {
+				uint8_t v;
+				if (bs.Read(v)) HandlingMgr::SetPlayerHandling(playerId, attrib, v);
+			}
+			else {
+				return false;
+			}
 		}
-		return false;
+		return true;
 	}
 	case ACTION_RESET_PLAYER_HANDLING: {
 		uint16_t playerId;
@@ -71,7 +85,7 @@ bool Actions::Process(CHandlingAction id, NetworkBitStream& bs, IPlayer& player)
 		struct CHandlingActionPacket response(ACTION_SET_VEHICLE_HANDLING);
 		response.data.Write(vehicleId);
 		HandlingMgr::__WriteHandlingEntryToBitStream(&response.data, it->second);
-		player.sendPacket(Span<uint8_t>(response.data.GetData(), response.data.GetNumberOfBitsUsed()), 0, true);
+		player.sendPacket(Span<uint8_t>(response.data.GetData(), response.data.GetNumberOfBytesUsed()), 0, true);
 		return false;
 	}
 	case ACTION_GET_MODEL_HANDLING: {
@@ -91,7 +105,7 @@ bool Actions::Process(CHandlingAction id, NetworkBitStream& bs, IPlayer& player)
 		struct CHandlingActionPacket response(ACTION_SET_MODEL_HANDLING);
 		response.data.Write(modelId);
 		HandlingMgr::__WriteHandlingEntryToBitStream(&response.data, *entry);
-		player.sendPacket(Span<uint8_t>(response.data.GetData(), response.data.GetNumberOfBitsUsed()), 0, true);
+		player.sendPacket(Span<uint8_t>(response.data.GetData(), response.data.GetNumberOfBytesUsed()), 0, true);
 		return false;
 	}
 	case ACTION_GET_PLAYER_HANDLING: {
@@ -105,7 +119,7 @@ bool Actions::Process(CHandlingAction id, NetworkBitStream& bs, IPlayer& player)
 		struct CHandlingActionPacket response(ACTION_SET_PLAYER_HANDLING);
 		response.data.Write(playerId);
 		HandlingMgr::__WriteHandlingEntryToBitStream(&response.data, it->second);
-		player.sendPacket(Span<uint8_t>(response.data.GetData(), response.data.GetNumberOfBitsUsed()), 0, true);
+		player.sendPacket(Span<uint8_t>(response.data.GetData(), response.data.GetNumberOfBytesUsed()), 0, true);
 		return false;
 	}
 	case ACTION_RESET_ALL: {

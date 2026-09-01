@@ -721,6 +721,12 @@ void HandlingManager::OnVehicleDestructor(CVehicle* pVehicle)
 {
 	std::lock_guard<std::recursive_mutex> lock(m_handlingMutex);
 
+	uint16_t vehicleId = GetVehicleSAMPId(pVehicle);
+	auto cushndleit = m_customHandlings.find(pVehicle);
+	auto plrhndleit = m_playerAppliedHandlings.find(vehicleId);
+	auto vehhndleit = m_vehicleHandlings.find(vehicleId);
+	auto cacheit = m_vehicleToSAMPIdCache.find(pVehicle);
+
 	if (!pVehicle) {
 		for (auto it = m_customHandlings.begin(); it != m_customHandlings.end();) {
 			if (GetVehicleSAMPId(it->first) == 0xFFFF) {
@@ -752,12 +758,20 @@ void HandlingManager::OnVehicleDestructor(CVehicle* pVehicle)
 		}
 	}
 
-	uint16_t vehicleId = GetVehicleSAMPId(pVehicle);
 	if (vehicleId != 0xFFFF) {
-		m_vehicleHandlings.erase(vehicleId);
-		m_playerAppliedHandlings.erase(vehicleId);
+		if (vehhndleit != m_vehicleHandlings.end()) {
+			m_vehicleHandlings.erase(vehhndleit);
+		}
+		if (plrhndleit != m_playerAppliedHandlings.end()) {
+			m_playerAppliedHandlings.erase(plrhndleit);
+		}
 	}
-	m_customHandlings.erase(pVehicle);
+	if (cushndleit != m_customHandlings.end()) {
+		m_customHandlings.erase(cushndleit);
+	}
+    if (cacheit != m_vehicleToSAMPIdCache.end()) {
+        m_vehicleToSAMPIdCache.erase(cacheit);
+    }
 }
 
 void HandlingManager::SendHandlingPacket(CHandlingAction action, RakNet::BitStream* bs)
@@ -847,6 +861,8 @@ bool HandlingManager::ProcessAction(CHandlingAction action, RakNet::BitStream* b
 		uint16_t playerId;
 		if (!bs->Read(playerId))
 			return false;
+		if (!m_isServerAuthorized)
+			return false;
 		QueueCommand({ PendingCommandType::ResetPlayer, playerId, {} });
 		return false;
 	}
@@ -934,8 +950,10 @@ bool HandlingManager::ProcessAction(CHandlingAction action, RakNet::BitStream* b
 			ResetPlayerHandling(m_playerHandlings.begin()->first);
 
 		// Also clear custom handlings (CVehicle* map) - they are per‑vehicle overrides
-		while (!m_customHandlings.empty())
+		while (!m_customHandlings.empty()) {
 			ResetVehicleHandling(m_customHandlings.begin()->first);
+			RemoveVehicleFromCache(m_customHandlings.begin()->first);
+		}
 		return false;
 	}
 	case ACTION_FILE_TRANSFER_BEGIN: {

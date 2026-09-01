@@ -1,6 +1,6 @@
 #include "CPlayer.h"
 
-CPlayer gPlayers[MAX_PLAYERS];
+std::unordered_map<int, CPlayer> gPlayers;
 
 void CPlayer::Reset()
 {

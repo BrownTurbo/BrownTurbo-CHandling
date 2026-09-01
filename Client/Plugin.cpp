@@ -57,6 +57,8 @@
 namespace fs = std::filesystem;
 using namespace plugin;
 
+ExtendedVeh::Collision::CollisionLoader* colLoader = &ExtendedVeh::Collision::CollisionLoader::Instance();
+
 class CustomVehiclesASI {
 private:
 	struct PendingCustomVehicle {
@@ -64,6 +66,7 @@ private:
 		CVehicleModelInfo* modelInfo = nullptr;
 		std::vector<uint8_t> txd;
 		std::vector<uint8_t> dff;
+		std::vector<uint8_t> col;
 		bool dffReady = false;
 		bool txdReady = false;
 		bool colReady = true;
@@ -106,10 +109,33 @@ private:
 				pending->dff = BinaryRwParser::ExtractClump(dffRes.data);
 				if (pending->dff.empty())
 					return;
+				pending->dffReady = true;
 
-				{
+				auto pushToQueue = [this, pending]() {
 					std::lock_guard<std::mutex> lock(m_queueMutex);
 					m_completedQueue.push(pending);
+				};
+
+				// If a custom collision URL is provided, download it next.
+				if (pending->def.colUrl[0] != '\0') {
+					AssetDownloadTask colTask;
+					colTask.modelId = static_cast<int32_t>(pending->def.customModelId);
+					colTask.url = pending->def.colUrl;
+					colTask.expectedSha256 = pending->def.colHash;
+					colTask.localCachePath = fs::path("models") / (std::to_string(pending->def.customModelId) + "_col.bin");
+
+					colTask.onComplete = [pending, pushToQueue](DownloadResult colRes) {
+						if (colRes.Success()) {
+							pending->col = std::move(colRes.data);
+							pending->colReady = true;
+						}
+						pushToQueue();
+					};
+					m_pipeline->Enqueue(std::move(colTask));
+				} else {
+					// No custom collision requested, proceed to queue
+					pending->colReady = true;
+					pushToQueue();
 				}
 			};
 			m_pipeline->Enqueue(std::move(dffTask));
@@ -154,6 +180,14 @@ private:
 				RpClump* pClump = RpClumpStreamRead(dffStream);
 				if (pClump) {
 					StreamingExtender::FinalizeClump(newModel, pClump);
+					if (pending->colReady && !pending->col.empty()) {
+						ExtendedVeh::Collision::CollisionLoader* colLoader = &ExtendedVeh::Collision::CollisionLoader::Instance();
+						if (!colLoader->LoadCollisionFromMemory(pending->col.data(), pending->col.size(), newModel))
+						{
+							SendMsg(0xFF8800, std::format("[CustomVeh] Warning: Failed to parse COL for model {}", pending->def.customModelId).c_str());
+						}
+					}
+
 				} else {
 					CTxdStore::RemoveTxdSlot(txdSlot);
 					SendMsg(0xFF0000, std::format("[CustomVeh] Failed to parse DFF for model {}", pending->def.customModelId).c_str());
@@ -349,7 +383,7 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD dwReason, LPVOID lpReserved)
 				threadSpawned = true;
 				std::thread(InitializeHooks).detach();
 			}
-			ExtendedVeh::Collision::CollisionLoader::Instance().Initialize();
+			colLoader->Initialize();
 		};
 		static CVehicle* s_prevLocalVehicle = nullptr;
 		Events::gameProcessEvent += []() {
@@ -362,7 +396,7 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD dwReason, LPVOID lpReserved)
 			// Update vehicle cache and model use counts
 			static std::vector<CVehicle*> previousVehicles;
 			std::vector<CVehicle*> currentVehicles;
-			currentVehicles.reserve(128);
+			currentVehicles.reserve(MAX_SAMP_VEHICLES);
 
 			auto pool = GetVehiclesPool();
 			if (!std::holds_alternative<std::nullptr_t>(pool)) {
@@ -378,8 +412,7 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD dwReason, LPVOID lpReserved)
 							}
 						}
 					}
-				},
-					pool);
+				}, pool);
 			}
 
 			// Detect new vehicles

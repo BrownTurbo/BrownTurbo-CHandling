@@ -1,5 +1,7 @@
 #pragma once
 
+#include <unordered_map>
+
 #ifndef MAX_PLAYERS
 #define MAX_PLAYERS 1000
 #endif
@@ -16,4 +18,4 @@ public:
 	void Reset();
 };
 
-extern CPlayer gPlayers[];
+extern std::unordered_map<int, CPlayer> gPlayers;

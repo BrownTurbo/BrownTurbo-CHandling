@@ -21,7 +21,12 @@ public:
 	void Unbind(uint16_t sampVehicleId)
 	{
 		std::lock_guard<std::mutex> lock(m_mutex);
-		m_bindings.erase(sampVehicleId);
+		auto it = m_bindings.find(sampVehicleId);
+		if (it == m_bindings.end())
+		{
+			return;
+		}
+		m_bindings.erase(it);
 	}
 
 	std::optional<uint32_t> Get(uint16_t sampVehicleId) const

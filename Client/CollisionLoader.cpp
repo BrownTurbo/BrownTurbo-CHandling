@@ -505,6 +505,36 @@ CollisionLoader::InspectFile(
 		outError);
 }
 
+bool CollisionLoader::LoadCollisionFromMemory(uint8_t* data, size_t size, CVehicleModelInfo* modelInfo)
+{
+	if (!data || size < 8)
+		return false;
+
+	uint8_t* colData = nullptr;
+
+	// A standard .col archive starts with "COLL" and a 4-byte total size.
+	// We must skip these 8 bytes to reach the actual COL2/COL3 model chunk.
+	if (memcmp(data, "COLL", 4) == 0) {
+		colData = data + 8;
+	}
+	// If the file is already a raw exported chunk without the archive wrapper
+	else if (memcmp(data, "COL2", 4) == 0 || memcmp(data, "COL3", 4) == 0) {
+		colData = data;
+	} else {
+		return false; // Unknown/Invalid magic header
+	}
+
+	// Allocate a new collision model instance if the vehicle doesn't have one
+	if (!modelInfo->m_pColModel) {
+		modelInfo->m_pColModel = new CColModel();
+	}
+
+	// Directly parse the chunk into our specific model, ignoring the embedded ID
+	CFileLoader::LoadCollisionModel(colData, *modelInfo->m_pColModel);
+
+	return true;
+}
+
 const RecordInfo*
 CollisionLoader::SelectRecord(
 	const std::vector<RecordInfo>& records,
@@ -873,8 +903,7 @@ CollisionLoader::Load(
 	return Result::Success;
 }
 
-Result
-CollisionLoader::Attach(
+Result CollisionLoader::Attach(
 	Handle& handle,
 	std::string& outError)
 {

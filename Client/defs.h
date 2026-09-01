@@ -32,6 +32,8 @@ struct CustomVehicleDef {
 	char dffHash[65]; // SHA-256 Hex String + Null Terminator
 	char txdUrl[128];
 	char txdHash[65]; // SHA-256 Hex String + Null Terminator
+	char colUrl[128];
+	char colHash[65];
 };
 
 struct VehicleCacheEntry {

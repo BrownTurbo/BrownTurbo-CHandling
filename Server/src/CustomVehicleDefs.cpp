@@ -1,4 +1,3 @@
-#include "BroadcastModelDefinition.h"
 #include "HandlingManager.h"
 #include <string>
 #include "CustomVehicleRegistry.h"
@@ -28,7 +27,7 @@ bool DefineCustomVehicle(uint32_t customModelId, const std::string& dffUrl,
 	if (!CustomVehicleRegistry::RegisterInternalCustomVehicle(def))
 		return false;
 
-	BroadcastModelDefinitionToClients(def);
+	HandlingMgr::SendCustomVehicleDefToAll(def.customModelId);
 
 	return true;
 }

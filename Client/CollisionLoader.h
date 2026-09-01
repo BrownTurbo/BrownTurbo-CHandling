@@ -10,6 +10,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include "game_sa/CVehicleModelInfo.h"
+
 class CBaseModelInfo;
 class CColModel;
 
@@ -157,6 +159,9 @@ public:
 		const char* expectedModelName,
 		Handle& outHandle,
 		std::string& outError);
+
+	// Load a COL from memory into a GTA CColModel and attach it to a model-info.
+	bool LoadCollisionFromMemory(uint8_t* data, size_t size, CVehicleModelInfo* modelInfo);
 
 	/*
 	 * Attach an already-loaded collision to a dedicated/custom model-info.

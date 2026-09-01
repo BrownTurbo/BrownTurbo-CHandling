@@ -207,17 +207,21 @@ native bool:CommitCustomVehicleDef(customModelId);
 native bool:DestroyCustomVehicle(customModelId);
 native bool:IsCustomVehicleModel(modelid);
 native bool:IsVehicleCustom(vehicleid);
+native SetCustomVehicleCol(modelid, const colUrl[], const colHash[]);
+native BindVehicleModel(vehicleid, modelid);
 
 /*
  * Stock Wrapper Helper for Single-Call Custom Vehicle Creation
  */
-stock bool:DefineCustomVehicle(customModelId, visualBase, audioBase, handlingBase, engineSoundId, const dffUrl[], const dffHash[], const txdUrl[], const txdHash[])
+stock bool:DefineCustomVehicle(customModelId, visualBase, audioBase, handlingBase, engineSoundId, const dffUrl[], const dffHash[], const txdUrl[], const txdHash[], const colUrl[], const colHash[])
 {
     if (!BeginCustomVehicleDef(customModelId, visualBase, audioBase, handlingBase, engineSoundId))
         return false;
     if (!SetCustomVehicleDff(customModelId, dffUrl, dffHash))
         return false;
     if (!SetCustomVehicleTxd(customModelId, txdUrl, txdHash))
+        return false;
+    if (!SetCustomVehicleCol(customModelId, colUrl, colHash))
         return false;
     return CommitCustomVehicleDef(customModelId);
 }

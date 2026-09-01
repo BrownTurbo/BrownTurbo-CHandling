@@ -158,7 +158,7 @@ void ProcessTick()
 		__WriteHandlingEntryToBitStream(&p.data, vIt->second);
 
 		for (IPlayer* player : core_->getPlayers().players()) {
-			player->sendPacket(Span<uint8_t>(p.data.GetData(), p.data.GetNumberOfBitsUsed()), 0, true);
+			player->sendPacket(Span<uint8_t>(p.data.GetData(), p.data.GetNumberOfBytesUsed()), 0, true);
 		}
 	}
 
@@ -177,7 +177,7 @@ void ProcessTick()
 		__WriteHandlingEntryToBitStream(&p.data, *mEntry);
 
 		for (IPlayer* player : core_->getPlayers().players()) {
-			player->sendPacket(Span<uint8_t>(p.data.GetData(), p.data.GetNumberOfBitsUsed()), 0, true);
+			player->sendPacket(Span<uint8_t>(p.data.GetData(), p.data.GetNumberOfBytesUsed()), 0, true);
 		}
 	}
 }
@@ -212,7 +212,7 @@ void OnPlayerConnect(IPlayer& player)
 			struct CHandlingActionPacket p(ACTION_SET_MODEL_HANDLING);
 			p.data.Write((uint16_t)(model + 400));
 			__WriteHandlingEntryToBitStream(&p.data, gBaseModelHandlings[model]);
-			player.sendPacket(Span<uint8_t>(p.data.GetData(), p.data.GetNumberOfBitsUsed()), 0, false);
+			player.sendPacket(Span<uint8_t>(p.data.GetData(), p.data.GetNumberOfBytesUsed()), 0, false);
 		}
 	}
 
@@ -221,7 +221,7 @@ void OnPlayerConnect(IPlayer& player)
 			struct CHandlingActionPacket p(ACTION_SET_MODEL_HANDLING);
 			p.data.Write((uint16_t)customModel);
 			__WriteHandlingEntryToBitStream(&p.data, entry);
-			player.sendPacket(Span<uint8_t>(p.data.GetData(), p.data.GetNumberOfBitsUsed()), 0, false);
+			player.sendPacket(Span<uint8_t>(p.data.GetData(), p.data.GetNumberOfBytesUsed()), 0, false);
 		}
 	}
 
@@ -252,7 +252,7 @@ void OnVehicleStreamIn(IVehicle& vehicle, IPlayer& player)
 	struct CHandlingActionPacket p(ACTION_SET_VEHICLE_HANDLING);
 	p.data.Write((uint16_t)vehicleid);
 	__WriteHandlingEntryToBitStream(&p.data, it->second);
-	player.sendPacket(Span<uint8_t>(p.data.GetData(), p.data.GetNumberOfBitsUsed()), 0, false);
+	player.sendPacket(Span<uint8_t>(p.data.GetData(), p.data.GetNumberOfBytesUsed()), 0, false);
 }
 
 /*
@@ -276,7 +276,7 @@ bool ResetModelHandling(int modelid)
 	ExtendedVehCompo* compo = ExtendedVehCompo::get();
 	ICore* core_ = compo->getCore();
 	for (IPlayer* player : core_->getPlayers().players()) {
-		player->sendPacket(Span<uint8_t>(p.data.GetData(), p.data.GetNumberOfBitsUsed()), 0, true);
+		player->sendPacket(Span<uint8_t>(p.data.GetData(), p.data.GetNumberOfBytesUsed()), 0, true);
 	}
 	return true;
 }
@@ -301,7 +301,7 @@ void ResetVehicleHandling(IVehicle& vehicle, bool sendToPlayers)
 		ExtendedVehCompo* compo = ExtendedVehCompo::get();
 		ICore* core_ = compo->getCore();
 		for (IPlayer* player : core_->getPlayers().players()) {
-			player->sendPacket(Span<uint8_t>(p.data.GetData(), p.data.GetNumberOfBitsUsed()), 0, true);
+			player->sendPacket(Span<uint8_t>(p.data.GetData(), p.data.GetNumberOfBytesUsed()), 0, true);
 		}
 	}
 }
@@ -629,7 +629,7 @@ bool SetPlayerHandling(uint16_t playerid, CHandlingAttrib attrib, float value)
 		__WriteHandlingEntryToBitStream(&p.data, playerHandlings[playerid]);
 		IPlayer* player = compo->GetPlayerByID(playerid);
 		if (player) {
-			player->sendPacket(Span<uint8_t>(p.data.GetData(), p.data.GetNumberOfBitsUsed()), 0, true);
+			player->sendPacket(Span<uint8_t>(p.data.GetData(), p.data.GetNumberOfBytesUsed()), 0, true);
 		}
 	}
 	return true;
@@ -660,7 +660,7 @@ bool SetPlayerHandling(uint16_t playerid, CHandlingAttrib attrib, unsigned int v
 		__WriteHandlingEntryToBitStream(&p.data, playerHandlings[playerid]);
 		IPlayer* player = compo->GetPlayerByID(playerid);
 		if (player) {
-			player->sendPacket(Span<uint8_t>(p.data.GetData(), p.data.GetNumberOfBitsUsed()), 0, true);
+			player->sendPacket(Span<uint8_t>(p.data.GetData(), p.data.GetNumberOfBytesUsed()), 0, true);
 		}
 	}
 	return true;
@@ -692,7 +692,7 @@ bool SetPlayerHandling(uint16_t playerid, CHandlingAttrib attrib, uint8_t value)
 		__WriteHandlingEntryToBitStream(&p.data, playerHandlings[playerid]);
 		IPlayer* player = compo->GetPlayerByID(playerid);
 		if (player) {
-			player->sendPacket(Span<uint8_t>(p.data.GetData(), p.data.GetNumberOfBitsUsed()), 0, true);
+			player->sendPacket(Span<uint8_t>(p.data.GetData(), p.data.GetNumberOfBytesUsed()), 0, true);
 		}
 	}
 	return true;
@@ -711,7 +711,7 @@ bool ResetPlayerHandling(uint16_t playerid)
 		p.data.Write(playerid);
 		IPlayer* player = compo->GetPlayerByID(playerid);
 		if (player) {
-			player->sendPacket(Span<uint8_t>(p.data.GetData(), p.data.GetNumberOfBitsUsed()), 0, true);
+			player->sendPacket(Span<uint8_t>(p.data.GetData(), p.data.GetNumberOfBytesUsed()), 0, true);
 		}
 	}
 	return true;
@@ -774,7 +774,7 @@ bool ResetAll(uint16_t playerid)
 			continue;
 		struct CHandlingActionPacket p(ACTION_RESET_VEHICLE);
 		p.data.Write(kv.first);
-		player->sendPacket(Span<uint8_t>(p.data.GetData(), p.data.GetNumberOfBitsUsed()), 0, true);
+		player->sendPacket(Span<uint8_t>(p.data.GetData(), p.data.GetNumberOfBytesUsed()), 0, true);
 	}
 
 	for (size_t i = 0; i < gBaseModelHandlings.size(); ++i) {
@@ -782,7 +782,7 @@ bool ResetAll(uint16_t playerid)
 			continue;
 		struct CHandlingActionPacket p(ACTION_RESET_MODEL);
 		p.data.Write((uint16_t)(i + 400));
-		player->sendPacket(Span<uint8_t>(p.data.GetData(), p.data.GetNumberOfBitsUsed()), 0, true);
+		player->sendPacket(Span<uint8_t>(p.data.GetData(), p.data.GetNumberOfBytesUsed()), 0, true);
 	}
 
 	for (const auto& [customModel, entry] : gCustomModelHandlings) {
@@ -790,7 +790,7 @@ bool ResetAll(uint16_t playerid)
 			continue;
 		struct CHandlingActionPacket p(ACTION_RESET_MODEL);
 		p.data.Write((uint16_t)customModel);
-		player->sendPacket(Span<uint8_t>(p.data.GetData(), p.data.GetNumberOfBitsUsed()), 0, true);
+		player->sendPacket(Span<uint8_t>(p.data.GetData(), p.data.GetNumberOfBytesUsed()), 0, true);
 	}
 
 	ResetPlayerHandling(playerid);
@@ -920,12 +920,14 @@ void SendCustomVehicleDefToPlayer(IPlayer& player, uint32_t modelId)
 	bs.Write(def.dffHash, 65);
 	bs.Write(def.txdUrl, 128);
 	bs.Write(def.txdHash, 65);
-	player.sendRPC(CHandlingRPCID::CUSTOM_VEHICLE_DEF, Span<uint8_t>(bs.GetData(), bs.GetNumberOfBitsUsed()), 0, false);
+	bs.Write(def.colUrl, 128);
+	bs.Write(def.colHash, 65);
+	player.sendRPC(CHandlingRPCID::CUSTOM_VEHICLE_DEF, Span<uint8_t>(bs.GetData(), bs.GetNumberOfBytesUsed()), 0, false);
 }
 
 void SendCustomVehicleDefToAll(uint32_t modelId)
 {
-	ExtendedVehCompo* compo;
+	ExtendedVehCompo* compo = ExtendedVehCompo::get();
 	ICore* core = compo->getCore();
 	for (IPlayer* player : core->getPlayers().players()) {
 		SendCustomVehicleDefToPlayer(*player, modelId);
@@ -936,7 +938,7 @@ void SendCustomVehicleDestroyToPlayer(IPlayer& player, uint32_t modelId)
 {
 	NetworkBitStream bs;
 	bs.Write(modelId);
-	player.sendRPC(CHandlingRPCID::DESTROY_CUSTOM_VEHICLE_MODEL, Span<uint8_t>(bs.GetData(), bs.GetNumberOfBitsUsed()), 0, false);
+	player.sendRPC(CHandlingRPCID::DESTROY_CUSTOM_VEHICLE_MODEL, Span<uint8_t>(bs.GetData(), bs.GetNumberOfBytesUsed()), 0, false);
 }
 
 void SendCustomVehicleDestroyToAll(uint32_t modelId)
