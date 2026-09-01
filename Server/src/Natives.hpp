@@ -394,3 +394,30 @@ SCRIPT_API(BindVehicleModel, bool(int vehicleid, int customModelId))
 	CustomVehicleBindingRegistry::Instance().Bind(static_cast<uint16_t>(vehicleid), static_cast<uint32_t>(customModelId));
 	return true;
 }
+
+// native GetFileSha256(const filename[], outputHash[]);
+SCRIPT_API(GetFileSha256, bool(const std::string& filename, std::string& outHash))
+{
+	// filename is relative to server models dir (or an absolute path — we restrict it)
+	std::string result;
+	if (!ModelTransferMgr::ComputeFileSha256(filename, result))
+		return false;
+	outHash = result;
+	return true;
+}
+
+// native InvalidateModelCache(modelid, fileKind);
+SCRIPT_API(InvalidateModelCache, bool(int modelId, int kind))
+{
+	if (modelId < 0)
+		return false;
+	ModelTransferMgr::InvalidateCache(static_cast<uint32_t>(modelId), static_cast<ModelFileKind>(kind));
+	return true;
+}
+
+// native GetClientFileStoreStatus(playerid, modelId, fileKind);
+// 0=unknown, 1=success, 2=failure
+SCRIPT_API(GetClientFileStoreStatus, int(int playerid, int modelId, int kind))
+{
+	return ModelTransferMgr::GetClientFileStoreStatus(playerid, static_cast<uint32_t>(modelId), static_cast<ModelFileKind>(kind));
+}

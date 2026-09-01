@@ -11,6 +11,23 @@ namespace fs = std::filesystem;
 
 class TransferConfig {
 public:
+	long long expireTimeMs = 24LL * 60 * 60 * 1000; // 24h
+	int maxCacheSizeMB = 512;
+	bool cacheEnabled = true;
+	int maxConcurrentTransfers = 4;
+	bool showTransferWindow = false;
+	int toggleKey = 0x78; // VK_F9
+
+	int retryMaxAttempts = 5;
+	int retryInitialBackoffMs = 500;
+	int retryMaxBackoffMs = 60000;
+	int retryResponseTimeoutMs = 8000;
+
+	int RequestChannel = 1;
+	int WorkerSleepMs = 250;
+
+	uint32_t clientMaxUncompressedSize = 200u * 1024u * 1024u; // 200 MB
+
 	static TransferConfig& Instance()
 	{
 		static TransferConfig instance;
@@ -48,10 +65,16 @@ public:
 		expireTimeMs = GetInt("ExpireTimeMs", expireTimeMs);
 		maxCacheSizeMB = GetInt("MaxCacheSizeMB", maxCacheSizeMB);
 		cacheEnabled = GetBool("CacheEnabled", cacheEnabled);
-		maxConcurrentTransfers = static_cast<int>(
-			GetInt("MaxConcurrentTransfers", maxConcurrentTransfers));
+		maxConcurrentTransfers = static_cast<int>(GetInt("MaxConcurrentTransfers", maxConcurrentTransfers));
 		showTransferWindow = GetBool("ShowTransferWindowByDefault", showTransferWindow);
 		toggleKey = static_cast<int>(GetInt("ToggleKeyVK", toggleKey));
+		retryMaxAttempts = static_cast<int>(GetInt("RetryMaxAttempts", retryMaxAttempts));
+		retryInitialBackoffMs = static_cast<int>(GetInt("RetryInitialBackoffMs", retryInitialBackoffMs));
+		retryMaxBackoffMs = static_cast<int>(GetInt("RetryMaxBackoffMs", retryMaxBackoffMs));
+		retryResponseTimeoutMs = static_cast<int>(GetInt("RetryResponseTimeoutMs", retryResponseTimeoutMs));
+		clientMaxUncompressedSize = static_cast<uint32_t>(GetInt("ClientMaxUncompressedSize", clientMaxUncompressedSize));
+		RequestChannel = static_cast<uint32_t>(GetInt("RequestChannel", RequestChannel));
+		WorkerSleepMs = static_cast<uint32_t>(GetInt("WorkerSleepMs", WorkerSleepMs));
 	}
 
 	// {Documents}\GTA San Andreas User Files\SAMP\cache
@@ -67,13 +90,6 @@ public:
 		}
 		return "samp_model_cache";
 	}
-
-	long long expireTimeMs = 24LL * 60 * 60 * 1000; // 24h
-	int maxCacheSizeMB = 512;
-	bool cacheEnabled = true;
-	int maxConcurrentTransfers = 4;
-	bool showTransferWindow = false;
-	int toggleKey = 0x78; // VK_F9
 
 private:
 	TransferConfig() = default;
@@ -94,7 +110,14 @@ private:
 			 << "CacheEnabled=1\n"
 			 << "MaxConcurrentTransfers=4\n"
 			 << "ShowTransferWindowByDefault=0\n"
-			 << "ToggleKeyVK=120\n"; // VK_F9
+			 << "ToggleKeyVK=120\n"
+			 << "RetryMaxAttempts=5\n"
+			 << "RetryInitialBackoffMs=500\n"
+			 << "RetryMaxBackoffMs=60000\n"
+			 << "RetryResponseTimeoutMs=8000\n"
+			 << "ClientMaxUncompressedSize=209715200\n" // 200 * 1024 * 1024
+			 << "WorkerSleepMs=250\n"
+			 << "RequestChannel=1\n";
 	}
 
 	static std::string Trim(std::string s)

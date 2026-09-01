@@ -27,6 +27,7 @@
 #include <sstream>
 
 #include "defs.h"
+#include "handling_manager.hpp"
 
 std::string Sha256HexOfBuffer(const uint8_t* data, size_t length)
 {
@@ -98,7 +99,7 @@ void ModelTransferClient::ManualRetry(uint32_t modelId, ModelFileKind kind)
 		// Reset attempt/backoff bookkeeping
 		entry.attempts = 1;
 		entry.progress.attempts = 1;
-		entry.backoffMs = kInitialBackoffMs;
+		entry.backoffMs = static_cast<uint32_t>(TransferConfig::Instance().retryInitialBackoffMs);
 		entry.nextRetryTime = std::chrono::steady_clock::time_point::min();
 		entry.progress.lastError.clear();
 		entry.progress.failed = false;
@@ -115,10 +116,10 @@ void ModelTransferClient::ManualRetry(uint32_t modelId, ModelFileKind kind)
 	MainThreadQueue::Instance().Push([modelId, kind]() {
 		RakNet::BitStream* bs;
 		bs->Write(static_cast<uint8_t>(PKT_CHANDLING));
-		bs->Write(static_cast<uint8_t>(30)); // ACTION_REQUEST_FILE_TRANSFER
+		bs->Write(static_cast<uint8_t>(CHandlingAction::ACTION_REQUEST_FILE_TRANSFER)); // ACTION_REQUEST_FILE_TRANSFER
 		bs->Write(modelId);
 		bs->Write(static_cast<uint8_t>(kind));
-		rakhook::send(bs, HIGH_PRIORITY, RELIABLE_ORDERED, kRequestChannel);
+		rakhook::send(bs, HIGH_PRIORITY, RELIABLE_ORDERED, TransferConfig::Instance().RequestChannel);
 	});
 }
 
@@ -161,7 +162,7 @@ void ModelTransferClient::RequestFile(uint32_t modelId, ModelFileKind kind, cons
 	entry.progress.statusText = "requesting";
 	entry.progress.attempts = 1;
 	entry.attempts = 1;
-	entry.backoffMs = kInitialBackoffMs;
+	entry.backoffMs = static_cast<uint32_t>(TransferConfig::Instance().retryInitialBackoffMs);
 	entry.expectedSha256 = expectedSha256Hex;
 	entry.onReady = std::move(onReady);
 
@@ -175,10 +176,10 @@ void ModelTransferClient::RequestFile(uint32_t modelId, ModelFileKind kind, cons
 	MainThreadQueue::Instance().Push([modelId, kind]() {
 		RakNet::BitStream* bs;
 		bs->Write(static_cast<uint8_t>(PKT_CHANDLING));
-		bs->Write(static_cast<uint8_t>(30)); // ACTION_REQUEST_FILE_TRANSFER
+		bs->Write(static_cast<uint8_t>(CHandlingAction::ACTION_REQUEST_FILE_TRANSFER)); // ACTION_REQUEST_FILE_TRANSFER
 		bs->Write(modelId);
 		bs->Write(static_cast<uint8_t>(kind));
-		rakhook::send(bs, HIGH_PRIORITY, RELIABLE_ORDERED, kRequestChannel);
+		rakhook::send(bs, HIGH_PRIORITY, RELIABLE_ORDERED, TransferConfig::Instance().RequestChannel);
 	});
 }
 
@@ -218,6 +219,21 @@ void ModelTransferClient::OnTransferBegin(RakNet::BitStream* bs)
 	if (!bs->Read(modelId) || !bs->Read(kindByte) || !bs->Read(compressedSize) || !bs->Read(uncompressedSize) || !bs->Read(totalChunks) || !bs->Read(shaBuf, 65))
 		return;
 
+	if (uncompressedSize == 0 || uncompressedSize > TransferConfig::Instance().clientMaxUncompressedSize) {
+		// Reject: unexpected uncompressed size (too large or zero)
+		std::lock_guard<std::mutex> lock(m_mutex);
+		auto it = m_active.find(Key(modelId, static_cast<ModelFileKind>(kindByte)));
+		if (it != m_active.end()) {
+			it->second.progress.statusText = "rejected: size";
+			it->second.progress.lastError = "uncompressed size out of bounds";
+			// schedule an immediate retry with backoff via existing scheduling logic:
+			it->second.nextRetryTime = std::chrono::steady_clock::now() + std::chrono::milliseconds(it->second.backoffMs ? it->second.backoffMs : 500);
+			it->second.attempts++;
+			it->second.progress.attempts = it->second.attempts;
+		}
+		return;
+	}
+
 	std::lock_guard<std::mutex> lock(m_mutex);
 	auto it = m_active.find(Key(modelId, static_cast<ModelFileKind>(kindByte)));
 	if (it == m_active.end())
@@ -233,7 +249,7 @@ void ModelTransferClient::OnTransferBegin(RakNet::BitStream* bs)
 	// refresh start time so timeout counts from begin arrival
 	it->second.progress.startTime = std::chrono::steady_clock::now();
 	it->second.nextRetryTime = std::chrono::steady_clock::time_point::min();
-	it->second.backoffMs = kInitialBackoffMs;
+	it->second.backoffMs = static_cast<uint32_t>(TransferConfig::Instance().retryInitialBackoffMs);
 }
 
 void ModelTransferClient::OnTransferChunk(RakNet::BitStream* bs)
@@ -296,6 +312,16 @@ void ModelTransferClient::OnTransferEnd(RakNet::BitStream* bs)
 		// keep the entry in map - we'll either finish it or schedule retry
 	}
 
+	// Sanity checks before decompressing
+	if (uncompressedSize == 0 || uncompressedSize > TransferConfig::Instance().clientMaxUncompressedSize || compressed.empty()) {
+		// schedule retry: either oversized or malformed
+		std::lock_guard<std::mutex> lock(m_mutex);
+		auto it = m_active.find(key);
+		if (it != m_active.end())
+			ScheduleRetry(it, "invalid size or empty compressed data");
+		return;
+	}
+
 	std::vector<uint8_t> decompressed(uncompressedSize);
 	uLongf destLen = uncompressedSize;
 	bool ok = true;
@@ -314,13 +340,22 @@ void ModelTransferClient::OnTransferEnd(RakNet::BitStream* bs)
 		// store and finish
 		bool stored = ModelCache::Instance().Store(modelId, static_cast<uint8_t>(kindByte), decompressed);
 		fs::path finalPath = stored ? ModelCache::Instance().PathFor(modelId, static_cast<uint8_t>(kindByte)) : fs::path {};
-		MainThreadQueue::Instance().Push([this, key, finalPath, onReady] {
+		MainThreadQueue::Instance().Push([this, key, ok, finalPath, onReady, modelId = static_cast<uint32_t>(key >> 2), kind = static_cast<ModelFileKind>(key & 0x3)] {
 			{
 				std::lock_guard<std::mutex> lock(m_mutex);
 				m_active.erase(key);
 			}
+
+			RakNet::BitStream bs;
+			bs.Write(static_cast<uint8_t>(PKT_CHANDLING));
+			bs.Write(static_cast<uint8_t>(CHandlingAction::ACTION_FILE_TRANSFER_STORED));
+			bs.Write(modelId);
+			bs.Write(static_cast<uint8_t>(kind));
+			bs.Write(static_cast<uint8_t>(ok ? 1 : 0));
+			rakhook::send(&bs, HIGH_PRIORITY, RELIABLE_ORDERED, 0);
+
 			if (onReady)
-				onReady(true, finalPath);
+				onReady(ok, finalPath);
 		});
 		return;
 	}
@@ -358,16 +393,17 @@ void ModelTransferClient::OnTransferCancel(RakNet::BitStream* bs)
 
 void ModelTransferClient::ScheduleRetry(std::unordered_map<uint64_t, InFlight>::iterator it, const std::string& err)
 {
+	const int cfgMaxAttempts = TransferConfig::Instance().retryMaxAttempts;
 	// called under lock
 	InFlight& entry = it->second;
 	entry.attempts++;
 	entry.progress.attempts = entry.attempts;
 	entry.progress.lastError = err;
-	entry.progress.statusText = (entry.attempts <= kMaxAttempts)
-		? ("retrying (" + std::to_string(entry.attempts) + "/" + std::to_string(kMaxAttempts) + ")")
+	entry.progress.statusText = (entry.attempts <= cfgMaxAttempts)
+		? ("retrying (" + std::to_string(entry.attempts) + "/" + std::to_string(cfgMaxAttempts) + ")")
 		: "failed";
 
-	if (entry.attempts > kMaxAttempts) {
+	if (entry.attempts > cfgMaxAttempts) {
 		// permanent failure - call onReady(false) on main thread and erase entry
 		auto onReady = entry.onReady;
 		uint64_t key = it->first;
@@ -388,10 +424,11 @@ void ModelTransferClient::ScheduleRetry(std::unordered_map<uint64_t, InFlight>::
 		return;
 	}
 
-	// schedule next retry with exponential backoff
-	uint32_t useBackoff = entry.backoffMs > 0 ? entry.backoffMs : kInitialBackoffMs;
+	uint32_t cfgInitialBackoff = static_cast<uint32_t>(TransferConfig::Instance().retryInitialBackoffMs);
+	uint32_t cfgMaxBackoff = static_cast<uint32_t>(TransferConfig::Instance().retryMaxBackoffMs);
+	uint32_t useBackoff = entry.backoffMs > 0 ? entry.backoffMs : cfgInitialBackoff;
 	entry.nextRetryTime = std::chrono::steady_clock::now() + std::chrono::milliseconds(useBackoff);
-	entry.backoffMs = std::min(static_cast<uint32_t>(entry.backoffMs ? entry.backoffMs * 2 : kInitialBackoffMs * 2), kMaxBackoffMs);
+	entry.backoffMs = std::min(static_cast<uint32_t>(entry.backoffMs ? entry.backoffMs * 2 : cfgInitialBackoff * 2), cfgMaxBackoff);
 
 	// reset receive buffer/positions for next attempt
 	entry.compressedBuffer.clear();
@@ -404,6 +441,10 @@ void ModelTransferClient::WorkerMain()
 {
 	while (!m_stopWorker) {
 		auto now = std::chrono::steady_clock::now();
+		const int cfgMaxAttempts = TransferConfig::Instance().retryMaxAttempts;
+		const uint32_t cfgResponseTimeout = static_cast<uint32_t>(TransferConfig::Instance().retryResponseTimeoutMs);
+		const uint32_t cfgInitialBackoff = static_cast<uint32_t>(TransferConfig::Instance().retryInitialBackoffMs);
+		const uint32_t cfgMaxBackoff = static_cast<uint32_t>(TransferConfig::Instance().retryMaxBackoffMs);
 		std::vector<std::pair<uint64_t, std::function<void()>>> sendTasks; // key + send lambda
 		{
 			std::lock_guard<std::mutex> lock(m_mutex);
@@ -411,7 +452,7 @@ void ModelTransferClient::WorkerMain()
 				InFlight& entry = it->second;
 				if (entry.progress.failed)
 					continue;
-				if (entry.attempts > kMaxAttempts) {
+				if (entry.attempts > cfgMaxAttempts) {
 					entry.progress.failed = true;
 					entry.progress.statusText = "failed (max attempts exceeded)";
 					continue;
@@ -425,10 +466,10 @@ void ModelTransferClient::WorkerMain()
 					sendTasks.emplace_back(it->first, [modelId, kind]() {
 						RakNet::BitStream* bs;
 						bs->Write(static_cast<uint8_t>(PKT_CHANDLING)); // ID_CHANDLING
-						bs->Write(static_cast<uint8_t>(30)); // ACTION_REQUEST_FILE_TRANSFER
+						bs->Write(static_cast<uint8_t>(CHandlingAction::ACTION_REQUEST_FILE_TRANSFER)); // ACTION_REQUEST_FILE_TRANSFER
 						bs->Write(modelId);
 						bs->Write(static_cast<uint8_t>(kind));
-						rakhook::send(bs, HIGH_PRIORITY, RELIABLE_ORDERED, kRequestChannel);
+						rakhook::send(bs, HIGH_PRIORITY, RELIABLE_ORDERED, TransferConfig::Instance().RequestChannel);
 					});
 
 					// update state
@@ -441,15 +482,15 @@ void ModelTransferClient::WorkerMain()
 				// 2) no activity timeout -> trigger a retry attempt proactively
 				if (!entry.progress.fromCache && (entry.progress.statusText == "requesting" || entry.progress.statusText == "downloading")) {
 					auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - entry.progress.startTime).count();
-					if (static_cast<uint32_t>(elapsed) > kResponseTimeoutMs) {
+					if (static_cast<uint32_t>(elapsed) > cfgResponseTimeout) {
 						// schedule retry now (no error string available because we timed out)
 						sendTasks.emplace_back(it->first, [modelId = entry.progress.modelId, kind = entry.progress.kind]() {
 							RakNet::BitStream* bs;
 							bs->Write(static_cast<uint8_t>(PKT_CHANDLING)); // ID_CHANDLING
-							bs->Write(static_cast<uint8_t>(30)); // ACTION_REQUEST_FILE_TRANSFER
+							bs->Write(static_cast<uint8_t>(CHandlingAction::ACTION_REQUEST_FILE_TRANSFER)); // ACTION_REQUEST_FILE_TRANSFER
 							bs->Write(modelId);
 							bs->Write(static_cast<uint8_t>(kind));
-							rakhook::send(bs, HIGH_PRIORITY, RELIABLE_ORDERED, kRequestChannel);
+							rakhook::send(bs, HIGH_PRIORITY, RELIABLE_ORDERED, TransferConfig::Instance().RequestChannel);
 						});
 
 						// update internally to show retry scheduled
@@ -457,7 +498,7 @@ void ModelTransferClient::WorkerMain()
 						entry.progress.attempts = entry.attempts;
 						entry.progress.lastError = "timeout";
 						entry.progress.statusText = "retrying (timeout)";
-						entry.backoffMs = std::min(entry.backoffMs ? entry.backoffMs * 2 : kInitialBackoffMs, kMaxBackoffMs);
+						entry.backoffMs = std::min(entry.backoffMs ? entry.backoffMs * 2 : cfgInitialBackoff, cfgMaxBackoff);
 						entry.nextRetryTime = now + std::chrono::milliseconds(entry.backoffMs);
 						entry.compressedBuffer.clear();
 						entry.progress.receivedBytes = 0;
@@ -473,7 +514,7 @@ void ModelTransferClient::WorkerMain()
 			MainThreadQueue::Instance().Push(p.second);
 		}
 
-		std::this_thread::sleep_for(std::chrono::milliseconds(kWorkerSleepMs));
+		std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<uint32_t>(TransferConfig::Instance().WorkerSleepMs)));
 	}
 }
 

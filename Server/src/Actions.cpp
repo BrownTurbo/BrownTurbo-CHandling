@@ -174,6 +174,17 @@ bool Actions::Process(CHandlingAction id, NetworkBitStream& bs, IPlayer& player)
 		ModelTransferMgr::CancelTransfer(player, modelId, static_cast<ModelFileKind>(kindByte));
 		return true;
 	}
+	case ACTION_FILE_TRANSFER_STORED:
+	{
+		uint32_t modelId;
+		uint8_t kindByte;
+		uint8_t successByte = 0;
+		bs.Read(modelId);
+		bs.Read(kindByte);
+		bs.Read(successByte);
+		ModelTransferMgr::OnClientReportFileStored(player, modelId, static_cast<ModelFileKind>(kindByte), successByte != 0);
+		return true;
+	}
 	default:
 		break;
 	}

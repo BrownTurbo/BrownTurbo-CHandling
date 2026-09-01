@@ -10,6 +10,7 @@
 
 #include <bcrypt.h>
 #include <zlib.h>
+#include <mutex>
 #pragma comment(lib, "bcrypt.lib")
 
 namespace fs = std::filesystem;
@@ -18,6 +19,9 @@ namespace ModelTransferMgr
 {
 namespace
 {
+	std::unordered_map<int, std::unordered_map<uint64_t, bool>> g_clientFileStatus;
+	std::mutex g_clientFileStatusMutex;
+
 	std::string g_modelsDir = "models";
 
 	struct CachedFile
@@ -31,6 +35,7 @@ namespace
 
 	// Keyed by (modelId << 2) | kind
 	std::unordered_map<uint64_t, CachedFile> g_cache;
+	std::mutex g_cacheMutex;
 
 	struct ActiveTransfer
 	{
@@ -42,7 +47,8 @@ namespace
 	};
 
 	std::deque<ActiveTransfer> g_activeTransfers;
-	constexpr size_t kMaxActiveTransfersPerPlayer = 8;
+	std::mutex g_activeMutex;
+	constexpr size_t kMaxActiveTransfersPerPlayer = 10;
 	constexpr uint32_t kMaxModelFileSize = 128u * 1024u * 1024u;
 
 	uint64_t CacheKey(uint32_t modelId, ModelFileKind kind)
@@ -99,16 +105,50 @@ namespace
 		return result;
 	}
 
+	static bool IsPathInsideBase(const std::filesystem::path& baseDir, const std::filesystem::path& candidate)
+	{
+		std::error_code ec;
+		auto baseCan = std::filesystem::weakly_canonical(baseDir, ec);
+		if (ec)
+			return false;
+		auto candCan = std::filesystem::weakly_canonical(candidate, ec);
+		if (ec)
+			return false;
+
+		// Make both paths absolute and compare prefix
+		auto baseStr = baseCan.native();
+		auto candStr = candCan.native();
+#ifdef _WIN32
+		// Case-insensitive on Windows
+		std::transform(baseStr.begin(), baseStr.end(), baseStr.begin(), ::tolower);
+		std::transform(candStr.begin(), candStr.end(), candStr.begin(), ::tolower);
+#endif
+		if (candStr.size() < baseStr.size())
+			return false;
+		// require baseStr to be a prefix and either equal or followed by path separator
+		if (candStr.compare(0, baseStr.size(), baseStr) != 0)
+			return false;
+		if (candStr.size() == baseStr.size())
+			return true;
+		char sep = std::filesystem::path::preferred_separator;
+		return candStr[baseStr.size()] == sep;
+	}
+
 	// Loads + zlib-compresses a file on first request, caches the result.
 	// Returns nullptr if the file doesn't exist or compression failed.
 	const CachedFile* GetOrLoadCache(uint32_t modelId, ModelFileKind kind)
 	{
 		const uint64_t key = CacheKey(modelId, kind);
-		auto it = g_cache.find(key);
-		if (it != g_cache.end() && it->second.valid)
-			return &it->second;
+		{
+			std::lock_guard<std::mutex> lock(g_cacheMutex);
+			auto it = g_cache.find(key);
+			if (it != g_cache.end() && it->second.valid)
+				return &it->second;
+		}
 
 		fs::path path = fs::path(g_modelsDir) / (std::to_string(modelId) + FileExtensionFor(kind));
+		if (!IsPathInsideBase(g_modelsDir, path))
+			return nullptr;
 		std::ifstream file(path, std::ios::binary | std::ios::ate);
 		if (!file.is_open())
 			return nullptr;
@@ -137,8 +177,11 @@ namespace
 		entry.compressed.resize(compressedSize);
 		entry.valid = true;
 
-		auto [insertedIt, _] = g_cache.insert_or_assign(key, std::move(entry));
-		return &insertedIt->second;
+		{
+			std::lock_guard<std::mutex> lock(g_cacheMutex);
+			auto [insertedIt, _] = g_cache.insert_or_assign(key, std::move(entry));
+			return &insertedIt->second;
+		}
 	}
 } // namespace
 
@@ -172,13 +215,18 @@ void OnRequestFile(IPlayer& player, uint32_t modelId, ModelFileKind kind)
 		{
 			return transfer.playerId == playerId;
 		}));
-	if (playerTransferCount >= kMaxActiveTransfersPerPlayer)
-		return;
 
-	const CachedFile* cached = GetOrLoadCache(modelId, kind);
 	ExtendedVehCompo* compo = ExtendedVehCompo::get();
 	ICore* core = compo->getCore();
 
+	if (playerTransferCount >= kMaxActiveTransfersPerPlayer)
+	{
+		if (core)
+			core->logLn(LogLevel::Warning, "[ModelTransfer] player %d exceeded max concurrent transfers.", player.getID());
+		return;
+	}
+
+	const CachedFile* cached = GetOrLoadCache(modelId, kind);
 	if (!cached)
 	{
 		CHandlingActionPacket cancel(ACTION_FILE_TRANSFER_CANCEL);
@@ -217,12 +265,16 @@ void OnRequestFile(IPlayer& player, uint32_t modelId, ModelFileKind kind)
 	transfer.modelId = modelId;
 	transfer.kind = kind;
 	transfer.totalChunks = totalChunks;
-	g_activeTransfers.push_back(transfer);
+	{
+		std::lock_guard<std::mutex> lock(g_activeMutex);
+		g_activeTransfers.push_back(transfer);
+	}
 }
 
 void CancelTransfer(IPlayer& player, uint32_t modelId, ModelFileKind kind)
 {
 	const int playerId = player.getID();
+	std::lock_guard<std::mutex> lock(g_activeMutex);
 	g_activeTransfers.erase(
 		std::remove_if(g_activeTransfers.begin(), g_activeTransfers.end(),
 			[&](const ActiveTransfer& t)
@@ -235,6 +287,7 @@ void CancelTransfer(IPlayer& player, uint32_t modelId, ModelFileKind kind)
 void OnPlayerDisconnect(IPlayer& player)
 {
 	const int playerId = player.getID();
+	std::lock_guard<std::mutex> lock(g_activeMutex);
 	g_activeTransfers.erase(std::remove_if(g_activeTransfers.begin(),
 								g_activeTransfers.end(),
 								[&](const ActiveTransfer& t)
@@ -246,8 +299,11 @@ void OnPlayerDisconnect(IPlayer& player)
 
 void ProcessTick()
 {
-	if (g_activeTransfers.empty())
-		return;
+	{
+		std::lock_guard<std::mutex> lock(g_activeMutex);
+		if (g_activeTransfers.empty())
+			return;
+	}
 
 	ExtendedVehCompo* compo = ExtendedVehCompo::get();
 	ICore* core = compo->getCore();
@@ -258,7 +314,10 @@ void ProcessTick()
 	for (size_t i = 0; i < count; ++i)
 	{
 		ActiveTransfer transfer = g_activeTransfers.front();
-		g_activeTransfers.pop_front();
+		{
+			std::lock_guard<std::mutex> lock(g_activeMutex);
+			g_activeTransfers.pop_front();
+		}
 
 		IPlayer* player = compo->GetPlayerByID(transfer.playerId);
 		if (!player)
@@ -306,5 +365,59 @@ void ProcessTick()
 			g_activeTransfers.push_back(transfer);
 		}
 	}
+}
+
+// Compute SHA-256 hex (64 chars) for a file under the models directory.
+bool ComputeFileSha256(const std::string& relativePath, std::string& outHex)
+{
+	try
+	{
+		fs::path candidate = fs::path(g_modelsDir) / fs::path(relativePath);
+		if (!IsPathInsideBase(g_modelsDir, candidate))
+			return false;
+		std::ifstream file(candidate, std::ios::binary);
+		if (!file.is_open())
+			return false;
+		std::vector<uint8_t> data((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+
+		outHex = Sha256Hex(data.data(), data.size()); // uses existing Sha256Hex helper
+		return !outHex.empty();
+	}
+	catch (...)
+	{
+		return false;
+	}
+}
+
+// Called from Actions::Process when client reports it stored a file.
+// Stores per-player result for later Pawn/native query.
+void OnClientReportFileStored(IPlayer& player, uint32_t modelId, ModelFileKind kind, bool success)
+{
+	const int pid = player.getID();
+	const uint64_t key = CacheKey(modelId, kind);
+
+	std::lock_guard<std::mutex> lock(g_clientFileStatusMutex);
+	g_clientFileStatus[pid][key] = success;
+
+	ExtendedVehCompo* compo = ExtendedVehCompo::get();
+	ICore* core = compo->getCore();
+	if (core)
+	{
+		core->logLn(LogLevel::Debug, "[ModelTransfer] player %d reported file store: model=%u kind=%u success=%d",
+			pid, modelId, static_cast<unsigned>(kind), success ? 1 : 0);
+	}
+}
+
+int GetClientFileStoreStatus(int playerId, uint32_t modelId, ModelFileKind kind)
+{
+	const uint64_t key = CacheKey(modelId, kind);
+	std::lock_guard<std::mutex> lock(g_clientFileStatusMutex);
+	auto pit = g_clientFileStatus.find(playerId);
+	if (pit == g_clientFileStatus.end())
+		return 0;
+	auto fit = pit->second.find(key);
+	if (fit == pit->second.end())
+		return 0;
+	return fit->second ? 1 : 2;
 }
 }

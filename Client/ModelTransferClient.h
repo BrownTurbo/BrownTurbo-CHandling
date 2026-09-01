@@ -107,10 +107,5 @@ private:
 	std::atomic<bool> m_workerStarted { false };
 
 	// Retry/backoff policy (tweakable)
-	static constexpr int kMaxAttempts = 5;
-	static constexpr uint32_t kInitialBackoffMs = 500; // 0.5s first backoff
-	static constexpr uint32_t kMaxBackoffMs = 60 * 1000; // cap at 60s
-	static constexpr uint32_t kResponseTimeoutMs = 8000; // consider a request timed out if no activity after 8s
-	static constexpr uint32_t kWorkerSleepMs = 250; // worker loop sleep
 	static constexpr int kRequestChannel = 1; // must match server kFileTransferChannel
 };

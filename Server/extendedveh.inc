@@ -209,6 +209,9 @@ native bool:IsCustomVehicleModel(modelid);
 native bool:IsVehicleCustom(vehicleid);
 native SetCustomVehicleCol(modelid, const colUrl[], const colHash[]);
 native BindVehicleModel(vehicleid, modelid);
+native GetFileSha256(const filename[], outputHash[]);
+native InvalidateModelCache(modelid, fileKind);
+native GetClientFileStoreStatus(playerid, modelId, fileKind);
 
 /*
  * Stock Wrapper Helper for Single-Call Custom Vehicle Creation
