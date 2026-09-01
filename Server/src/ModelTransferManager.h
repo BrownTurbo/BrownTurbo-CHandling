@@ -5,7 +5,8 @@
 #include <cstdint>
 #include <string>
 
-namespace ModelTransferMgr {
+namespace ModelTransferMgr
+{
 void Initialize(const std::string& modelsDirectory);
 
 // Called from Actions::Process's ACTION_REQUEST_FILE_TRANSFER case.

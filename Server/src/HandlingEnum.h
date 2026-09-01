@@ -1,7 +1,8 @@
 #pragma once
 #include <cstdint>
 
-enum CHandlingAttrib : uint8_t {
+enum CHandlingAttrib : uint8_t
+{
 	HANDL_UIDENTIFIER = 1, // A
 	HANDL_FMASS, // B
 	HANDL_FTURNMASS, // c
@@ -49,7 +50,8 @@ enum CHandlingLights : unsigned char
 	LIGHTS_TALL
 };*/
 
-enum CHandlingAttribType {
+enum CHandlingAttribType
+{
 	TYPE_NONE,
 	TYPE_UINT,
 	TYPE_FLOAT,

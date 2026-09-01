@@ -418,26 +418,25 @@ void ModelTransferClient::WorkerMain()
 				}
 				// 1) scheduled retry time hit?
 				if (entry.nextRetryTime != std::chrono::steady_clock::time_point::min()
-					&& entry.nextRetryTime <= now)
-					{
-						// prepare a send task (run on main thread)
-						uint32_t modelId = entry.progress.modelId;
-						ModelFileKind kind = entry.progress.kind;
-						sendTasks.emplace_back(it->first, [modelId, kind]() {
-							RakNet::BitStream* bs;
-							bs->Write(static_cast<uint8_t>(PKT_CHANDLING)); // ID_CHANDLING
-							bs->Write(static_cast<uint8_t>(30)); // ACTION_REQUEST_FILE_TRANSFER
-							bs->Write(modelId);
-							bs->Write(static_cast<uint8_t>(kind));
-							rakhook::send(bs, HIGH_PRIORITY, RELIABLE_ORDERED, kRequestChannel);
-						});
+					&& entry.nextRetryTime <= now) {
+					// prepare a send task (run on main thread)
+					uint32_t modelId = entry.progress.modelId;
+					ModelFileKind kind = entry.progress.kind;
+					sendTasks.emplace_back(it->first, [modelId, kind]() {
+						RakNet::BitStream* bs;
+						bs->Write(static_cast<uint8_t>(PKT_CHANDLING)); // ID_CHANDLING
+						bs->Write(static_cast<uint8_t>(30)); // ACTION_REQUEST_FILE_TRANSFER
+						bs->Write(modelId);
+						bs->Write(static_cast<uint8_t>(kind));
+						rakhook::send(bs, HIGH_PRIORITY, RELIABLE_ORDERED, kRequestChannel);
+					});
 
-						// update state
-						entry.progress.statusText = "requesting";
-						entry.progress.startTime = std::chrono::steady_clock::now();
-						entry.nextRetryTime = std::chrono::steady_clock::time_point::min();
-						continue;
-					}
+					// update state
+					entry.progress.statusText = "requesting";
+					entry.progress.startTime = std::chrono::steady_clock::now();
+					entry.nextRetryTime = std::chrono::steady_clock::time_point::min();
+					continue;
+				}
 
 				// 2) no activity timeout -> trigger a retry attempt proactively
 				if (!entry.progress.fromCache && (entry.progress.statusText == "requesting" || entry.progress.statusText == "downloading")) {

@@ -7,7 +7,8 @@
 #include <cstdint>
 
 // action identifier is sent as single byte
-enum CHandlingAction : unsigned char {
+enum CHandlingAction : unsigned char
+{
 	ACTION_INIT = 10,
 	ACTION_INIT_RESPONSE = 11,
 	ACTION_RESET_MODEL = 15,
@@ -27,7 +28,8 @@ enum CHandlingAction : unsigned char {
 	ACTION_FILE_TRANSFER_CANCEL = 34
 };
 
-struct CHandlingActionPacket {
+struct CHandlingActionPacket
+{
 	NetworkBitStream data;
 
 	CHandlingActionPacket(CHandlingAction actionID)
@@ -37,13 +39,17 @@ struct CHandlingActionPacket {
 	}
 };
 
-namespace Actions {
+namespace Actions
+{
 bool Process(CHandlingAction id, NetworkBitStream& bs, IPlayer& player);
 }
 
-enum class ModelFileKind : uint8_t { Dff = 0,
+enum class ModelFileKind : uint8_t
+{
+	Dff = 0,
 	Txd = 1,
-	Col = 2 };
+	Col = 2
+};
 
 inline constexpr int kFileTransferChannel = 1;
 inline constexpr uint32_t kFileChunkSize = 4096;

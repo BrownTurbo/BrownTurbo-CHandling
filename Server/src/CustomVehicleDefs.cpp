@@ -13,14 +13,20 @@ bool DefineCustomVehicle(uint32_t customModelId, const std::string& dffUrl,
 	strncpy(def.dffHash, dffHash.c_str(), sizeof(def.dffHash) - 1);
 	strncpy(def.txdUrl, txdUrl.c_str(), sizeof(def.txdUrl) - 1);
 	strncpy(def.txdHash, txdHash.c_str(), sizeof(def.txdHash) - 1);
-	if (!colUrl.empty()) {
+	if (!colUrl.empty())
+	{
 		strncpy(def.colUrl, colUrl.c_str(), sizeof(def.colUrl) - 1);
-	} else {
+	}
+	else
+	{
 		def.colUrl[0] = '\0';
 	}
-	if (!colHash.empty()) {
+	if (!colHash.empty())
+	{
 		strncpy(def.colHash, colHash.c_str(), sizeof(def.colHash) - 1);
-	} else {
+	}
+	else
+	{
 		def.colHash[0] = '\0';
 	}
 

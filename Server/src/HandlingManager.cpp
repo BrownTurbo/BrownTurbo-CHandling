@@ -11,12 +11,14 @@
 #include <unordered_set>
 
 #define CHECK_TYPE(attribute, type)                                                                                \
-	if (GetHandlingAttributeType(attrib) != type) {                                                                \
+	if (GetHandlingAttributeType(attrib) != type)                                                                  \
+	{                                                                                                              \
 		core_->logLn(LogLevel::Error, "[ExtendedVeh] Invalid type (%d) specified for attribute %d", type, attrib); \
 		return false;                                                                                              \
 	}
 
-namespace HandlingMgr {
+namespace HandlingMgr
+{
 std::array<stHandlingEntry, CVehicleMgr::BASE_MAX_VEHICLE_MODELS> gBaseModelHandlings;
 std::unordered_map<uint32_t, stHandlingEntry> gCustomModelHandlings;
 
@@ -31,14 +33,17 @@ std::unordered_set<uint32_t> usOutgoingModelMods;
 
 stHandlingEntry* GetModelHandlingEntry(uint32_t modelid)
 {
-	if (CVehicleMgr::IsBaseVehicleModel(modelid)) {
+	if (CVehicleMgr::IsBaseVehicleModel(modelid))
+	{
 		return &gBaseModelHandlings[CVehicleMgr::GetBaseModelIndex(modelid)];
 	}
 	auto it = gCustomModelHandlings.find(modelid);
-	if (it != gCustomModelHandlings.end()) {
+	if (it != gCustomModelHandlings.end())
+	{
 		return &it->second;
 	}
-	if (CVehicleMgr::IS_VALID_VEHICLE_MODEL(modelid)) {
+	if (CVehicleMgr::IS_VALID_VEHICLE_MODEL(modelid))
+	{
 		stHandlingEntry entry;
 		HandlingDefault::copyDefaultModelHandling(modelid, &entry.handlingData);
 		auto [insertedIt, _] = gCustomModelHandlings.emplace(modelid, std::move(entry));
@@ -54,10 +59,12 @@ void __WriteHandlingEntryToBitStream(NetworkBitStream* bs, const struct stHandli
 {
 	bs->Write((uint8_t)entry.handlingModMap.size());
 
-	for (auto const& i : entry.handlingModMap) {
+	for (auto const& i : entry.handlingModMap)
+	{
 		bs->Write((uint8_t)i.first); // attribute
 		bs->Write((uint8_t)i.second.type);
-		switch (i.second.type) {
+		switch (i.second.type)
+		{
 		case TYPE_BYTE:
 			bs->Write(i.second.bval);
 			break;
@@ -86,7 +93,8 @@ void __addMod(struct stHandlingEntry* handling, CHandlingAttrib attribute, const
 		return;
 
 	/* write the value to the handling data so we can Get it later on */
-	switch (mod.type) {
+	switch (mod.type)
+	{
 	case TYPE_FLOAT:
 		*(float*)offs = mod.fval;
 		break;
@@ -125,9 +133,11 @@ bool __AddVehicleHandlingMod(uint16_t vehicleid, CHandlingAttrib attribute, cons
 
 	auto& vEntry = vehicleHandlings[vehicleid];
 	// copy the handling of the model & apply the changed value
-	if (vEntry.usesModelHandling) {
+	if (vEntry.usesModelHandling)
+	{
 		vEntry.usesModelHandling = false;
-		if (vEntry.modelHandling) {
+		if (vEntry.modelHandling)
+		{
 			memcpy(&vEntry.handlingData, &vEntry.modelHandling->handlingData, sizeof(struct tHandlingData));
 		}
 	}
@@ -144,31 +154,36 @@ void ProcessTick()
 {
 	ExtendedVehCompo* compo = ExtendedVehCompo::get();
 	ICore* core_ = compo->getCore();
-	while (!usOutgoingVehicleMods.empty()) {
+	while (!usOutgoingVehicleMods.empty())
+	{
 		const auto it = usOutgoingVehicleMods.begin();
 		uint16_t vehicleid = *it;
 		usOutgoingVehicleMods.erase(it);
 
 		auto vIt = vehicleHandlings.find(vehicleid);
-		if (!compo->IsValidVehicle(vehicleid) || vIt == vehicleHandlings.end() || vIt->second.usesModelHandling) {
+		if (!compo->IsValidVehicle(vehicleid) || vIt == vehicleHandlings.end() || vIt->second.usesModelHandling)
+		{
 			continue;
 		}
 		struct CHandlingActionPacket p(ACTION_SET_VEHICLE_HANDLING);
 		p.data.Write(vehicleid);
 		__WriteHandlingEntryToBitStream(&p.data, vIt->second);
 
-		for (IPlayer* player : core_->getPlayers().players()) {
+		for (IPlayer* player : core_->getPlayers().players())
+		{
 			player->sendPacket(Span<uint8_t>(p.data.GetData(), p.data.GetNumberOfBytesUsed()), 0, true);
 		}
 	}
 
-	while (!usOutgoingModelMods.empty()) {
+	while (!usOutgoingModelMods.empty())
+	{
 		const auto it = usOutgoingModelMods.begin();
 		uint32_t modelid = *it;
 		usOutgoingModelMods.erase(it);
 
 		stHandlingEntry* mEntry = GetModelHandlingEntry(modelid);
-		if (!CVehicleMgr::IS_VALID_VEHICLE_MODEL(modelid) || !mEntry || mEntry->handlingModMap.empty()) {
+		if (!CVehicleMgr::IS_VALID_VEHICLE_MODEL(modelid) || !mEntry || mEntry->handlingModMap.empty())
+		{
 			continue;
 		}
 
@@ -176,7 +191,8 @@ void ProcessTick()
 		p.data.Write((uint16_t)modelid);
 		__WriteHandlingEntryToBitStream(&p.data, *mEntry);
 
-		for (IPlayer* player : core_->getPlayers().players()) {
+		for (IPlayer* player : core_->getPlayers().players())
+		{
 			player->sendPacket(Span<uint8_t>(p.data.GetData(), p.data.GetNumberOfBytesUsed()), 0, true);
 		}
 	}
@@ -185,7 +201,8 @@ void ProcessTick()
 // call right after HandlingDefault::Initialize()
 void InitializeModelHandlings()
 {
-	for (uint16_t i = 0; i < CVehicleMgr::BASE_MAX_VEHICLE_MODELS; i++) {
+	for (uint16_t i = 0; i < CVehicleMgr::BASE_MAX_VEHICLE_MODELS; i++)
+	{
 		HandlingDefault::copyDefaultModelHandling(i + 400, &gBaseModelHandlings[i].handlingData);
 		gBaseModelHandlings[i].handlingModMap.clear();
 	}
@@ -196,7 +213,8 @@ void OnCreateVehicle(int vehicleid)
 {
 	ExtendedVehCompo* compo = ExtendedVehCompo::get();
 	IVehicle* pVeh = compo->GetVehicleByID(vehicleid);
-	if (pVeh) {
+	if (pVeh)
+	{
 		ResetVehicleHandling(*pVeh, false);
 	}
 }
@@ -207,8 +225,10 @@ void OnPlayerConnect(IPlayer& player)
 	if (!gPlayers[playerid].hasCHandling())
 		return;
 
-	for (uint16_t model = 0; model < CVehicleMgr::BASE_MAX_VEHICLE_MODELS; model++) {
-		if (!gBaseModelHandlings[model].handlingModMap.empty()) {
+	for (uint16_t model = 0; model < CVehicleMgr::BASE_MAX_VEHICLE_MODELS; model++)
+	{
+		if (!gBaseModelHandlings[model].handlingModMap.empty())
+		{
 			struct CHandlingActionPacket p(ACTION_SET_MODEL_HANDLING);
 			p.data.Write((uint16_t)(model + 400));
 			__WriteHandlingEntryToBitStream(&p.data, gBaseModelHandlings[model]);
@@ -216,8 +236,10 @@ void OnPlayerConnect(IPlayer& player)
 		}
 	}
 
-	for (const auto& [customModel, entry] : gCustomModelHandlings) {
-		if (!entry.handlingModMap.empty()) {
+	for (const auto& [customModel, entry] : gCustomModelHandlings)
+	{
+		if (!entry.handlingModMap.empty())
+		{
 			struct CHandlingActionPacket p(ACTION_SET_MODEL_HANDLING);
 			p.data.Write((uint16_t)customModel);
 			__WriteHandlingEntryToBitStream(&p.data, entry);
@@ -225,7 +247,8 @@ void OnPlayerConnect(IPlayer& player)
 		}
 	}
 
-	for (const auto& kv : customVehicleDefs) {
+	for (const auto& kv : customVehicleDefs)
+	{
 		SendCustomVehicleDefToPlayer(player, kv.first);
 	}
 }
@@ -241,7 +264,8 @@ void OnVehicleStreamIn(IVehicle& vehicle, IPlayer& player)
 	int modelid = vehicle.getModel();
 	int forplayerid = player.getID();
 
-	if (IsCustomVehicle(modelid)) {
+	if (IsCustomVehicle(modelid))
+	{
 		SendCustomVehicleDefToPlayer(player, modelid);
 	}
 
@@ -275,7 +299,8 @@ bool ResetModelHandling(int modelid)
 
 	ExtendedVehCompo* compo = ExtendedVehCompo::get();
 	ICore* core_ = compo->getCore();
-	for (IPlayer* player : core_->getPlayers().players()) {
+	for (IPlayer* player : core_->getPlayers().players())
+	{
 		player->sendPacket(Span<uint8_t>(p.data.GetData(), p.data.GetNumberOfBytesUsed()), 0, true);
 	}
 	return true;
@@ -294,13 +319,15 @@ void ResetVehicleHandling(IVehicle& vehicle, bool sendToPlayers)
 	vEntry.modelHandling = GetModelHandlingEntry(modelid);
 	vEntry.usesModelHandling = true;
 
-	if (sendToPlayers) {
+	if (sendToPlayers)
+	{
 		struct CHandlingActionPacket p(ACTION_RESET_VEHICLE);
 		p.data.Write((uint16_t)vehicleid);
 
 		ExtendedVehCompo* compo = ExtendedVehCompo::get();
 		ICore* core_ = compo->getCore();
-		for (IPlayer* player : core_->getPlayers().players()) {
+		for (IPlayer* player : core_->getPlayers().players())
+		{
 			player->sendPacket(Span<uint8_t>(p.data.GetData(), p.data.GetNumberOfBytesUsed()), 0, true);
 		}
 	}
@@ -612,7 +639,8 @@ bool SetPlayerHandling(uint16_t playerid, CHandlingAttrib attrib, float value)
 	if (!IsValidHandlingValue(attrib, value))
 		return false;
 
-	if (playerHandlings.find(playerid) == playerHandlings.end()) {
+	if (playerHandlings.find(playerid) == playerHandlings.end())
+	{
 		playerHandlings[playerid].handlingData = gBaseModelHandlings[0].handlingData;
 		playerHandlings[playerid].handlingModMap.clear();
 	}
@@ -628,7 +656,8 @@ bool SetPlayerHandling(uint16_t playerid, CHandlingAttrib attrib, float value)
 		p.data.Write(playerid);
 		__WriteHandlingEntryToBitStream(&p.data, playerHandlings[playerid]);
 		IPlayer* player = compo->GetPlayerByID(playerid);
-		if (player) {
+		if (player)
+		{
 			player->sendPacket(Span<uint8_t>(p.data.GetData(), p.data.GetNumberOfBytesUsed()), 0, true);
 		}
 	}
@@ -643,7 +672,8 @@ bool SetPlayerHandling(uint16_t playerid, CHandlingAttrib attrib, unsigned int v
 	if (!(type == TYPE_UINT || type == TYPE_FLAG))
 		return false;
 
-	if (playerHandlings.find(playerid) == playerHandlings.end()) {
+	if (playerHandlings.find(playerid) == playerHandlings.end())
+	{
 		playerHandlings[playerid].handlingData = gBaseModelHandlings[0].handlingData;
 		playerHandlings[playerid].handlingModMap.clear();
 	}
@@ -654,12 +684,14 @@ bool SetPlayerHandling(uint16_t playerid, CHandlingAttrib attrib, unsigned int v
 	__addMod(&playerHandlings[playerid], attrib, mod);
 
 	ExtendedVehCompo* compo = ExtendedVehCompo::get();
-	if (compo) {
+	if (compo)
+	{
 		struct CHandlingActionPacket p(ACTION_SET_PLAYER_HANDLING);
 		p.data.Write(playerid);
 		__WriteHandlingEntryToBitStream(&p.data, playerHandlings[playerid]);
 		IPlayer* player = compo->GetPlayerByID(playerid);
-		if (player) {
+		if (player)
+		{
 			player->sendPacket(Span<uint8_t>(p.data.GetData(), p.data.GetNumberOfBytesUsed()), 0, true);
 		}
 	}
@@ -676,7 +708,8 @@ bool SetPlayerHandling(uint16_t playerid, CHandlingAttrib attrib, uint8_t value)
 	if (!IsValidHandlingValue(attrib, value))
 		return false;
 
-	if (playerHandlings.find(playerid) == playerHandlings.end()) {
+	if (playerHandlings.find(playerid) == playerHandlings.end())
+	{
 		playerHandlings[playerid].handlingData = gBaseModelHandlings[0].handlingData;
 		playerHandlings[playerid].handlingModMap.clear();
 	}
@@ -686,12 +719,14 @@ bool SetPlayerHandling(uint16_t playerid, CHandlingAttrib attrib, uint8_t value)
 	mod.type = TYPE_BYTE;
 	__addMod(&playerHandlings[playerid], attrib, mod);
 
-	if (compo) {
+	if (compo)
+	{
 		struct CHandlingActionPacket p(ACTION_SET_PLAYER_HANDLING);
 		p.data.Write(playerid);
 		__WriteHandlingEntryToBitStream(&p.data, playerHandlings[playerid]);
 		IPlayer* player = compo->GetPlayerByID(playerid);
-		if (player) {
+		if (player)
+		{
 			player->sendPacket(Span<uint8_t>(p.data.GetData(), p.data.GetNumberOfBytesUsed()), 0, true);
 		}
 	}
@@ -706,11 +741,13 @@ bool ResetPlayerHandling(uint16_t playerid)
 	playerHandlings.erase(it);
 
 	ExtendedVehCompo* compo = ExtendedVehCompo::get();
-	if (compo) {
+	if (compo)
+	{
 		struct CHandlingActionPacket p(ACTION_RESET_PLAYER_HANDLING);
 		p.data.Write(playerid);
 		IPlayer* player = compo->GetPlayerByID(playerid);
-		if (player) {
+		if (player)
+		{
 			player->sendPacket(Span<uint8_t>(p.data.GetData(), p.data.GetNumberOfBytesUsed()), 0, true);
 		}
 	}
@@ -769,7 +806,8 @@ bool ResetAll(uint16_t playerid)
 	if (!player)
 		return false;
 
-	for (auto& kv : vehicleHandlings) {
+	for (auto& kv : vehicleHandlings)
+	{
 		if (kv.second.handlingModMap.empty())
 			continue;
 		struct CHandlingActionPacket p(ACTION_RESET_VEHICLE);
@@ -777,7 +815,8 @@ bool ResetAll(uint16_t playerid)
 		player->sendPacket(Span<uint8_t>(p.data.GetData(), p.data.GetNumberOfBytesUsed()), 0, true);
 	}
 
-	for (size_t i = 0; i < gBaseModelHandlings.size(); ++i) {
+	for (size_t i = 0; i < gBaseModelHandlings.size(); ++i)
+	{
 		if (gBaseModelHandlings[i].handlingModMap.empty())
 			continue;
 		struct CHandlingActionPacket p(ACTION_RESET_MODEL);
@@ -785,7 +824,8 @@ bool ResetAll(uint16_t playerid)
 		player->sendPacket(Span<uint8_t>(p.data.GetData(), p.data.GetNumberOfBytesUsed()), 0, true);
 	}
 
-	for (const auto& [customModel, entry] : gCustomModelHandlings) {
+	for (const auto& [customModel, entry] : gCustomModelHandlings)
+	{
 		if (entry.handlingModMap.empty())
 			continue;
 		struct CHandlingActionPacket p(ACTION_RESET_MODEL);
@@ -929,7 +969,8 @@ void SendCustomVehicleDefToAll(uint32_t modelId)
 {
 	ExtendedVehCompo* compo = ExtendedVehCompo::get();
 	ICore* core = compo->getCore();
-	for (IPlayer* player : core->getPlayers().players()) {
+	for (IPlayer* player : core->getPlayers().players())
+	{
 		SendCustomVehicleDefToPlayer(*player, modelId);
 	}
 }
@@ -945,7 +986,8 @@ void SendCustomVehicleDestroyToAll(uint32_t modelId)
 {
 	ExtendedVehCompo* compo = ExtendedVehCompo::get();
 	ICore* core_ = compo->getCore();
-	for (IPlayer* player : core_->getPlayers().players()) {
+	for (IPlayer* player : core_->getPlayers().players())
+	{
 		SendCustomVehicleDestroyToPlayer(*player, modelId);
 	}
 }

@@ -5,19 +5,19 @@ namespace CustomVehicleTransport
 {
 namespace
 {
-    // Mirrors CHandlingActionPacket's shape (packet id + action byte header)
-    // but for CustomVeh::Protocol::Action instead of the v1 CHandlingAction enum -
-    // every future v2 send (AssetBegin/Chunk/etc.) can reuse this.
-    struct ScvActionPacket
-    {
+	// Mirrors CHandlingActionPacket's shape (packet id + action byte header)
+	// but for CustomVeh::Protocol::Action instead of the v1 CHandlingAction enum -
+	// every future v2 send (AssetBegin/Chunk/etc.) can reuse this.
+	struct ScvActionPacket
+	{
 		NetworkBitStream data;
 
 		explicit ScvActionPacket(CustomVeh::Protocol::Action action)
-        {
-            data.Write(static_cast<uint8_t>(CustomVeh::Protocol::PACKET_ID));
-            data.Write(static_cast<uint8_t>(action));
-        }
-    };
+		{
+			data.Write(static_cast<uint8_t>(CustomVeh::Protocol::PACKET_ID));
+			data.Write(static_cast<uint8_t>(action));
+		}
+	};
 }
 
 void SendVehicleBind(IPlayer& player, uint16_t sampVehicleId, uint32_t customModelId)

@@ -14,11 +14,14 @@
 
 namespace fs = std::filesystem;
 
-namespace ModelTransferMgr {
-namespace {
+namespace ModelTransferMgr
+{
+namespace
+{
 	std::string g_modelsDir = "models";
 
-	struct CachedFile {
+	struct CachedFile
+	{
 		std::vector<uint8_t> compressed;
 		uint32_t uncompressedSize = 0;
 		std::string
@@ -29,7 +32,8 @@ namespace {
 	// Keyed by (modelId << 2) | kind
 	std::unordered_map<uint64_t, CachedFile> g_cache;
 
-	struct ActiveTransfer {
+	struct ActiveTransfer
+	{
 		int playerId = -1;
 		uint32_t modelId = 0;
 		ModelFileKind kind {};
@@ -48,7 +52,8 @@ namespace {
 
 	const char* FileExtensionFor(ModelFileKind kind)
 	{
-		switch (kind) {
+		switch (kind)
+		{
 		case ModelFileKind::Dff:
 			return ".dff";
 		case ModelFileKind::Txd:
@@ -71,15 +76,18 @@ namespace {
 		if (BCryptGetProperty(hAlg, BCRYPT_HASH_LENGTH,
 				reinterpret_cast<PUCHAR>(&cbHash), sizeof(DWORD),
 				&cbData, 0)
-			< 0) {
+			< 0)
+		{
 			BCryptCloseAlgorithmProvider(hAlg, 0);
 			return result;
 		}
 		std::vector<uint8_t> hash(cbHash);
-		if (BCryptCreateHash(hAlg, &hHash, nullptr, 0, nullptr, 0, 0) >= 0) {
+		if (BCryptCreateHash(hAlg, &hHash, nullptr, 0, nullptr, 0, 0) >= 0)
+		{
 			BCryptHashData(hHash, const_cast<PUCHAR>(data), static_cast<ULONG>(length),
 				0);
-			if (BCryptFinishHash(hHash, hash.data(), cbHash, 0) >= 0) {
+			if (BCryptFinishHash(hHash, hash.data(), cbHash, 0) >= 0)
+			{
 				char hex[2 * 32 + 1] = {};
 				for (size_t i = 0; i < hash.size(); ++i)
 					std::snprintf(hex + i * 2, 3, "%02x", hash[i]);
@@ -122,7 +130,8 @@ namespace {
 		uLongf compressedSize = compressedBound;
 		if (compress2(entry.compressed.data(), &compressedSize, raw.data(),
 				static_cast<uLong>(raw.size()), Z_BEST_COMPRESSION)
-			!= Z_OK) {
+			!= Z_OK)
+		{
 			return nullptr;
 		}
 		entry.compressed.resize(compressedSize);
@@ -151,14 +160,16 @@ void OnRequestFile(IPlayer& player, uint32_t modelId, ModelFileKind kind)
 
 	const int playerId = player.getID();
 	if (std::any_of(g_activeTransfers.begin(), g_activeTransfers.end(),
-			[&](const ActiveTransfer& transfer) {
+			[&](const ActiveTransfer& transfer)
+			{
 				return transfer.playerId == playerId && transfer.modelId == modelId && transfer.kind == kind;
 			}))
 		return;
 
 	const size_t playerTransferCount = static_cast<size_t>(std::count_if(
 		g_activeTransfers.begin(), g_activeTransfers.end(),
-		[&](const ActiveTransfer& transfer) {
+		[&](const ActiveTransfer& transfer)
+		{
 			return transfer.playerId == playerId;
 		}));
 	if (playerTransferCount >= kMaxActiveTransfersPerPlayer)
@@ -168,7 +179,8 @@ void OnRequestFile(IPlayer& player, uint32_t modelId, ModelFileKind kind)
 	ExtendedVehCompo* compo = ExtendedVehCompo::get();
 	ICore* core = compo->getCore();
 
-	if (!cached) {
+	if (!cached)
+	{
 		CHandlingActionPacket cancel(ACTION_FILE_TRANSFER_CANCEL);
 		cancel.data.Write(modelId);
 		cancel.data.Write(static_cast<uint8_t>(kind));
@@ -213,7 +225,8 @@ void CancelTransfer(IPlayer& player, uint32_t modelId, ModelFileKind kind)
 	const int playerId = player.getID();
 	g_activeTransfers.erase(
 		std::remove_if(g_activeTransfers.begin(), g_activeTransfers.end(),
-			[&](const ActiveTransfer& t) {
+			[&](const ActiveTransfer& t)
+			{
 				return t.playerId == playerId && t.modelId == modelId && t.kind == kind;
 			}),
 		g_activeTransfers.end());
@@ -224,7 +237,8 @@ void OnPlayerDisconnect(IPlayer& player)
 	const int playerId = player.getID();
 	g_activeTransfers.erase(std::remove_if(g_activeTransfers.begin(),
 								g_activeTransfers.end(),
-								[&](const ActiveTransfer& t) {
+								[&](const ActiveTransfer& t)
+								{
 									return t.playerId == playerId;
 								}),
 		g_activeTransfers.end());
@@ -241,7 +255,8 @@ void ProcessTick()
 		return;
 
 	const size_t count = g_activeTransfers.size();
-	for (size_t i = 0; i < count; ++i) {
+	for (size_t i = 0; i < count; ++i)
+	{
 		ActiveTransfer transfer = g_activeTransfers.front();
 		g_activeTransfers.pop_front();
 
@@ -254,7 +269,8 @@ void ProcessTick()
 			continue;
 
 		uint32_t sentThisTick = 0;
-		while (sentThisTick < kChunksPerPlayerPerTick && transfer.nextChunkIndex < transfer.totalChunks) {
+		while (sentThisTick < kChunksPerPlayerPerTick && transfer.nextChunkIndex < transfer.totalChunks)
+		{
 			const uint32_t offset = transfer.nextChunkIndex * kFileChunkSize;
 			const uint32_t remaining = static_cast<uint32_t>(cached->compressed.size()) - offset;
 			const uint16_t chunkLen = static_cast<uint16_t>(std::min<uint32_t>(remaining, kFileChunkSize));
@@ -275,7 +291,8 @@ void ProcessTick()
 			++sentThisTick;
 		}
 
-		if (transfer.nextChunkIndex >= transfer.totalChunks) {
+		if (transfer.nextChunkIndex >= transfer.totalChunks)
+		{
 			CHandlingActionPacket end(ACTION_FILE_TRANSFER_END);
 			end.data.Write(transfer.modelId);
 			end.data.Write(static_cast<uint8_t>(transfer.kind));
@@ -283,7 +300,9 @@ void ProcessTick()
 				Span<uint8_t>(end.data.GetData(), end.data.GetNumberOfBytesUsed()),
 				kFileTransferChannel, true);
 			// done
-		} else {
+		}
+		else
+		{
 			g_activeTransfers.push_back(transfer);
 		}
 	}

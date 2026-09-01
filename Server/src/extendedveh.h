@@ -39,7 +39,8 @@ class ExtendedVehCompo final : public IComponent,
 							   public PoolEventHandler<IVehicle>,
 							   public PlayerConnectEventHandler,
 							   public VehicleEventHandler,
-							   public PoolIDProvider {
+							   public PoolIDProvider
+{
 public:
 	PROVIDE_UID(0xFBE076EB9EA67E4C);
 

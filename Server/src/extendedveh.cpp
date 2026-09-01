@@ -12,7 +12,8 @@
 #include "PacketEnum.h"
 
 #include <pawn-natives/NativeFunc.hpp>
-namespace NativeHook {
+namespace NativeHook
+{
 std::unordered_map<amx_native_fn_t, std::function<cell(AMX*, cell*, amx_native_fn_t)>> NativeHookManager::g_hookMap;
 }
 PawnLookup* getAmxLookups()
@@ -51,7 +52,8 @@ IVehicle* ExtendedVehCompo::GetVehicleByID(int vehicleid)
 	if (!CVehicleMgr::IS_VALID_VEHICLEID(vehicleid))
 		return nullptr;
 
-	if (get() && get()->vehicles_) {
+	if (get() && get()->vehicles_)
+	{
 		return get()->vehicles_->get(vehicleid);
 	}
 	return nullptr;
@@ -72,9 +74,11 @@ IPlayer* ExtendedVehCompo::GetPlayerByID(int playerid)
 		return nullptr;
 
 	const auto& players_ = core->getPlayers().players();
-	for (auto it = players_.begin(); it != players_.end(); ++it) {
+	for (auto it = players_.begin(); it != players_.end(); ++it)
+	{
 		IPlayer* player = *it;
-		if (player && player->getID() == playerid) {
+		if (player && player->getID() == playerid)
+		{
 			return player;
 		}
 	}
@@ -85,7 +89,8 @@ void ExtendedVehCompo::onInit(IComponentList* components)
 {
 	StringView name = componentName();
 	pawn_component_ = components->queryComponent<IPawnComponent>();
-	if (!pawn_component_) {
+	if (!pawn_component_)
+	{
 		core_->logLn(LogLevel::Error,
 			"Error loading component %.*s: Pawn component not loaded",
 			name.length(), name.data());
@@ -93,23 +98,27 @@ void ExtendedVehCompo::onInit(IComponentList* components)
 	}
 
 	core_->getEventDispatcher().addEventHandler(this);
-	if (pawn_component_) {
+	if (pawn_component_)
+	{
 		pawn_component_->getEventDispatcher().addEventHandler(this);
 		AMX_EXPORTS_DTA = const_cast<void**>(pawn_component_->getAmxFunctions().data());
 	}
 
 	vehicles_ = components->queryComponent<IVehiclesComponent>();
-	if (!vehicles_) {
+	if (!vehicles_)
+	{
 		core_->logLn(LogLevel::Error,
 			"Error loading component %.*s: Vehicles component not loaded",
 			name.data());
 		return;
 	}
-	if (vehicles_) {
+	if (vehicles_)
+	{
 		vehicles_->getPoolEventDispatcher().addEventHandler(this);
 	}
 
-	for (auto network : core_->getNetworks()) {
+	for (auto network : core_->getNetworks())
+	{
 		network->getInEventDispatcher().addEventHandler(this);
 		network->getOutEventDispatcher().addEventHandler(this);
 	}
@@ -159,12 +168,14 @@ void ExtendedVehCompo::onTick(Microseconds elapsed, TimePoint now)
 bool ExtendedVehCompo::onReceivePacket(IPlayer& peer, int id,
 	NetworkBitStream& bs)
 {
-	if (id == (uint8_t)CHandlingPacketID::PKT_CHANDLING) {
+	if (id == (uint8_t)CHandlingPacketID::PKT_CHANDLING)
+	{
 		core_->logLn(LogLevel::Debug,
 			"[ExtendedVeh] Received custom packet ID %.*d from player "
 			"%.*d (size=%.*d)\n",
 			id, peer.getID(), bs.GetNumberOfBytesUsed());
-		if (bs.GetNumberOfUnreadBits() >= 8) {
+		if (bs.GetNumberOfUnreadBits() >= 8)
+		{
 			uint8_t action;
 			if (!bs.Read(action))
 				return false;
@@ -203,7 +214,8 @@ ExtendedVehCompo*& ExtendedVehCompo::get()
 	return component;
 }
 
-COMPONENT_ENTRY_POINT() {
+COMPONENT_ENTRY_POINT()
+{
 	ExtendedVehCompo* comp;
 	return (IComponent*)comp->get();
 }

@@ -3,7 +3,8 @@
 #include "extendedveh.h"
 #include <cstring>
 
-namespace HandlingDefault {
+namespace HandlingDefault
+{
 static struct tHandlingData gDefaultModelHandlings[CVehicleMgr::BASE_MAX_VEHICLE_MODELS];
 
 bool copyDefaultModelHandling(uint16_t modelid, struct tHandlingData* dest)
@@ -11,7 +12,8 @@ bool copyDefaultModelHandling(uint16_t modelid, struct tHandlingData* dest)
 	if (!CVehicleMgr::IS_VALID_VEHICLE_MODEL(modelid) || dest == nullptr)
 		return false;
 
-	if (CVehicleMgr::IsBaseVehicleModel(modelid)) {
+	if (CVehicleMgr::IsBaseVehicleModel(modelid))
+	{
 		memcpy(dest, &gDefaultModelHandlings[CVehicleMgr::GetBaseModelIndex(modelid)], sizeof(struct tHandlingData));
 		return true;
 	}
@@ -26,7 +28,8 @@ struct tHandlingData* getDefaultModelHandling(uint16_t modelid)
 	if (!CVehicleMgr::IS_VALID_VEHICLE_MODEL(modelid))
 		return nullptr;
 
-	if (CVehicleMgr::IsBaseVehicleModel(modelid)) {
+	if (CVehicleMgr::IsBaseVehicleModel(modelid))
+	{
 		return &gDefaultModelHandlings[CVehicleMgr::GetBaseModelIndex(modelid)];
 	}
 
@@ -10216,7 +10219,8 @@ void Initialize()
 #ifdef DUMP_DEFAULT_HANDLINGS
 #include <cstdio>
 
-struct stModelHandlingID {
+struct stModelHandlingID
+{
 	short modelID;
 	char handlingID[20];
 };
@@ -10437,7 +10441,8 @@ const struct stModelHandlingID modelTranslationTable[MAX_MODELS] = {
 	{ 611, "UTIL_TR1" }
 };
 
-namespace HandlingDefault {
+namespace HandlingDefault
+{
 
 struct tHandlingData modelHandlings[MAX_MODELS];
 
@@ -10450,8 +10455,10 @@ void __fastcall loadHandlingHook(void* thisptr, DWORD EDX, struct tHandlingData*
 	// find the model id (note that some models use the same handling twice)
 	bool found = false;
 
-	for (int i = 0; i < MAX_MODELS; i++) {
-		if (((t_GetHandlingId)0x6F4FD0)(thisptr, modelTranslationTable[i].handlingID) == handling.m_iIndex) {
+	for (int i = 0; i < MAX_MODELS; i++)
+	{
+		if (((t_GetHandlingId)0x6F4FD0)(thisptr, modelTranslationTable[i].handlingID) == handling.m_iIndex)
+		{
 			DebugPrint("IT'S A HIT! model %d %s index %d\n", i, modelTranslationTable[i].handlingID, handling.m_iIndex);
 			found = true;
 
@@ -10462,15 +10469,19 @@ void __fastcall loadHandlingHook(void* thisptr, DWORD EDX, struct tHandlingData*
 	if (!found)
 		DebugPrint("Model not found for handling index %d (probably R* leftover)\n", handling.m_iIndex);
 
-	if (handling.m_iIndex == 209) {
+	if (handling.m_iIndex == 209)
+	{
 		// Default handling.cfg stops at index 209, time to dump what we got
 		static bool written = false;
 
-		if (!written) {
+		if (!written)
+		{
 			FILE* f = fopen("default_handling_dump.txt", "w");
-			if (f) {
+			if (f)
+			{
 				struct tHandlingData* hn = nullptr;
-				for (int i = 0; i < MAX_MODELS; i++) {
+				for (int i = 0; i < MAX_MODELS; i++)
+				{
 					hn = &modelHandlings[i];
 
 #define dumpvar "gDefaultModelHandlings"
@@ -10538,7 +10549,8 @@ void __fastcall loadHandlingHook(void* thisptr, DWORD EDX, struct tHandlingData*
 				}
 
 				fclose(f);
-			} else
+			}
+			else
 				DebugPrint("Couldn't open default_handling_dump.txt\n");
 			written = true;
 		}

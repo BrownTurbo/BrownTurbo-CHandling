@@ -187,11 +187,14 @@ SCRIPT_API(GetVehicleHandlingInt, bool(int vehicleid, CHandlingAttrib attrib, un
 	value = 0;
 	bool ret = false;
 
-	if (GetHandlingAttributeType(attrib) == TYPE_BYTE) {
+	if (GetHandlingAttributeType(attrib) == TYPE_BYTE)
+	{
 		uint8_t byteVal = 0;
 		ret = HandlingMgr::GetVehicleHandling(static_cast<std::uint16_t>(vehicleid), attrib, byteVal);
 		value = byteVal;
-	} else {
+	}
+	else
+	{
 		ret = HandlingMgr::GetVehicleHandling(static_cast<std::uint16_t>(vehicleid), attrib, value);
 	}
 	return ret;
@@ -210,11 +213,14 @@ SCRIPT_API(GetModelHandlingInt, bool(int modelid, CHandlingAttrib attrib, unsign
 	value = 0;
 	bool ret = false;
 
-	if (GetHandlingAttributeType(attrib) == TYPE_BYTE) {
+	if (GetHandlingAttributeType(attrib) == TYPE_BYTE)
+	{
 		uint8_t byteVal = 0;
 		ret = HandlingMgr::GetModelHandling((uint16_t)modelid, attrib, byteVal);
 		value = byteVal;
-	} else {
+	}
+	else
+	{
 		ret = HandlingMgr::GetModelHandling((uint16_t)modelid, attrib, value);
 	}
 	return ret;
@@ -232,11 +238,14 @@ SCRIPT_API(GetDefaultHandlingInt, bool(int modelid, CHandlingAttrib attrib, unsi
 {
 	bool ret = false;
 
-	if (GetHandlingAttributeType(attrib) == TYPE_BYTE) {
+	if (GetHandlingAttributeType(attrib) == TYPE_BYTE)
+	{
 		uint8_t byteVal = 0;
 		ret = HandlingMgr::GetDefaultHandling((uint16_t)modelid, attrib, byteVal);
 		value = byteVal;
-	} else {
+	}
+	else
+	{
 		ret = HandlingMgr::GetDefaultHandling((uint16_t)modelid, attrib, value);
 	}
 	return ret;
@@ -275,11 +284,14 @@ SCRIPT_API(GetPlayerHandlingInt, bool(int playerid, CHandlingAttrib attrib, unsi
 	value = 0;
 	bool ret = false;
 
-	if (GetHandlingAttributeType(attrib) == TYPE_BYTE) {
+	if (GetHandlingAttributeType(attrib) == TYPE_BYTE)
+	{
 		uint8_t byteVal = 0;
 		ret = HandlingMgr::GetPlayerHandling(static_cast<std::uint16_t>(playerid), attrib, byteVal);
 		value = byteVal;
-	} else {
+	}
+	else
+	{
 		ret = HandlingMgr::GetPlayerHandling(static_cast<std::uint16_t>(playerid), attrib, value);
 	}
 	return ret;
@@ -380,5 +392,5 @@ SCRIPT_API(BindVehicleModel, bool(int vehicleid, int customModelId))
 	if (!vehicle)
 		return false;
 	CustomVehicleBindingRegistry::Instance().Bind(static_cast<uint16_t>(vehicleid), static_cast<uint32_t>(customModelId));
-    return true;
+	return true;
 }

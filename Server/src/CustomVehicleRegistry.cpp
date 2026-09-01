@@ -1,6 +1,7 @@
 #include "CustomVehicleRegistry.h"
 
-namespace {
+namespace
+{
 std::unordered_map<uint32_t, HandlingMgr::CustomVehicleDef> g_registry;
 std::mutex g_registryMutex;
 }

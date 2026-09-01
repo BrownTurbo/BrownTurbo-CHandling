@@ -6,6 +6,6 @@
 
 namespace CustomVehicleTransport
 {
-    void SendVehicleBind(IPlayer& player, uint16_t sampVehicleId, uint32_t customModelId);
-    void SendVehicleUnbind(IPlayer& player, uint16_t sampVehicleId);
+void SendVehicleBind(IPlayer& player, uint16_t sampVehicleId, uint32_t customModelId);
+void SendVehicleUnbind(IPlayer& player, uint16_t sampVehicleId);
 }

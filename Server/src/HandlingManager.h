@@ -13,9 +13,11 @@
 #include <unordered_map>
 #include <unordered_set>
 
-namespace HandlingMgr {
+namespace HandlingMgr
+{
 #pragma pack(push, 1)
-struct CustomVehicleDef {
+struct CustomVehicleDef
+{
 	uint32_t customModelId;
 	uint32_t visualBaseModelId;
 	uint32_t audioBaseModelId;
@@ -29,21 +31,25 @@ struct CustomVehicleDef {
 	char colHash[65];
 };
 
-struct stHandlingMod {
+struct stHandlingMod
+{
 	CHandlingAttribType type;
-	union {
+	union
+	{
 		float fval;
 		unsigned int uival;
 		uint8_t bval;
 	};
 };
 
-struct stHandlingEntry {
+struct stHandlingEntry
+{
 	struct tHandlingData handlingData;
 	std::unordered_map<CHandlingAttrib, struct stHandlingMod, std::hash<uint8_t>> handlingModMap; // modifications are saved here so we only send things that have changed
 };
 
-struct stVehicleHandlingEntry : stHandlingEntry {
+struct stVehicleHandlingEntry : stHandlingEntry
+{
 	struct stHandlingEntry* modelHandling = nullptr;
 	bool usesModelHandling = false; // set to true under OnCreateVehicle, set to false as soon as you change any handling attribute for this vehicle
 };

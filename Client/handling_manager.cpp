@@ -769,9 +769,9 @@ void HandlingManager::OnVehicleDestructor(CVehicle* pVehicle)
 	if (cushndleit != m_customHandlings.end()) {
 		m_customHandlings.erase(cushndleit);
 	}
-    if (cacheit != m_vehicleToSAMPIdCache.end()) {
-        m_vehicleToSAMPIdCache.erase(cacheit);
-    }
+	if (cacheit != m_vehicleToSAMPIdCache.end()) {
+		m_vehicleToSAMPIdCache.erase(cacheit);
+	}
 }
 
 void HandlingManager::SendHandlingPacket(CHandlingAction action, RakNet::BitStream* bs)

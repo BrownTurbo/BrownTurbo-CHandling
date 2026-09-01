@@ -4,7 +4,8 @@
 #include <optional>
 #include <unordered_map>
 
-class CustomVehicleBindingRegistry {
+class CustomVehicleBindingRegistry
+{
 public:
 	static CustomVehicleBindingRegistry& Instance()
 	{

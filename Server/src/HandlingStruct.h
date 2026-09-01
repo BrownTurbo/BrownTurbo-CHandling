@@ -2,13 +2,15 @@
 #include <cstdint>
 /* game structures */
 
-struct tTransmissionGear {
+struct tTransmissionGear
+{
 	float m_fMaxVelocity;
 	float m_fChangeUpVelocity;
 	float m_fChangeDownVelocity;
 };
 
-class cTransmission {
+class cTransmission
+{
 public:
 	tTransmissionGear m_aGears[6];
 	unsigned char m_nDriveType; // F/R/4
@@ -32,14 +34,16 @@ public:
 	*/
 };
 
-enum eVehicleLightsSize : unsigned char {
+enum eVehicleLightsSize : unsigned char
+{
 	LIGHTS_LONG,
 	LIGHTS_SMALL,
 	LIGHTS_BIG,
 	LIGHTS_TALL
 };
 
-enum eVehicleHandlingFlags : unsigned int {
+enum eVehicleHandlingFlags : unsigned int
+{
 	VEHICLE_HANDLING_1G_BOOST = 0x1,
 	VEHICLE_HANDLING_2G_BOOST = 0x2,
 	VEHICLE_HANDLING_NPC_ANTI_ROLL = 0x4,
@@ -70,7 +74,8 @@ enum eVehicleHandlingFlags : unsigned int {
 	VEHICLE_HANDLING_SWINGING_CHASSIS = 0x10000000
 };
 
-enum eVehicleHandlingModelFlags : unsigned int {
+enum eVehicleHandlingModelFlags : unsigned int
+{
 	VEHICLE_HANDLING_MODEL_IS_VAN = 0x1,
 	VEHICLE_HANDLING_MODEL_IS_BUS = 0x2,
 	VEHICLE_HANDLING_MODEL_IS_LOW = 0x4,
@@ -105,13 +110,15 @@ enum eVehicleHandlingModelFlags : unsigned int {
 	VEHICLE_HANDLING_MODEL_IS_HATCHBACK = 0x80000000
 };
 
-struct CVector {
+struct CVector
+{
 	float fX;
 	float fY;
 	float fZ;
 };
 
-struct tHandlingData {
+struct tHandlingData
+{
 	int m_iIndex;
 	float m_fMass; // 1.0 to 50000.0
 	float field_8;
@@ -139,9 +146,11 @@ struct tHandlingData {
 	float m_fSuspensionBiasBetweenFrontAndRear;
 	float m_fSuspensionAntiDiveMultiplier;
 	float m_fCollisionDamageMultiplier; // 0.2 to 5.0
-	union {
+	union
+	{
 		eVehicleHandlingModelFlags m_nModelFlags;
-		struct {
+		struct
+		{
 			unsigned int m_bIsVan : 1;
 			unsigned int m_bIsBus : 1;
 			unsigned int m_bIsLow : 1;
@@ -176,9 +185,11 @@ struct tHandlingData {
 			unsigned int m_bIsHatchback : 1;
 		};
 	};
-	union {
+	union
+	{
 		eVehicleHandlingFlags m_nHandlingFlags;
-		struct {
+		struct
+		{
 			unsigned int m_b1gBoost : 1;
 			unsigned int m_b2gBoost : 1;
 			unsigned int m_bNpcAntiRoll : 1;

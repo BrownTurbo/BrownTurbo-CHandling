@@ -6,7 +6,8 @@
 #include <stdexcept>
 #include <unordered_map>
 
-namespace CVehicleMgr {
+namespace CVehicleMgr
+{
 inline constexpr uint32_t BASE_MODEL_START = 400;
 inline constexpr uint32_t BASE_MODEL_END = 611;
 inline constexpr uint32_t BASE_MAX_VEHICLE_MODELS = 212;
@@ -29,7 +30,8 @@ inline constexpr uint32_t GetBaseModelIndex(uint32_t modelId) noexcept
 	return modelId - BASE_MODEL_START;
 }
 
-class VehicleRegistry {
+class VehicleRegistry
+{
 private:
 	uint32_t m_maxVehicles { DEFAULT_MAX_VEHICLES };
 
@@ -72,7 +74,8 @@ public:
 
 	bool IsValidVehicleModel(uint32_t modelId) const noexcept
 	{
-		if (modelId >= BASE_MODEL_START && modelId <= BASE_MODEL_END) {
+		if (modelId >= BASE_MODEL_START && modelId <= BASE_MODEL_END)
+		{
 			return true;
 		}
 
@@ -82,14 +85,16 @@ public:
 
 	uint32_t RegisterCustomModel(uint32_t modelId)
 	{
-		if (modelId >= BASE_MODEL_START && modelId <= BASE_MODEL_END) {
+		if (modelId >= BASE_MODEL_START && modelId <= BASE_MODEL_END)
+		{
 			return modelId - BASE_MODEL_START;
 		}
 
 		std::unique_lock lock(m_mutex);
 
 		auto it = m_customModelIndices.find(modelId);
-		if (it != m_customModelIndices.end()) {
+		if (it != m_customModelIndices.end())
+		{
 			return it->second;
 		}
 
@@ -106,13 +111,15 @@ public:
 
 	std::optional<uint32_t> GetModelIndex(uint32_t modelId) const noexcept
 	{
-		if (modelId >= BASE_MODEL_START && modelId <= BASE_MODEL_END) {
+		if (modelId >= BASE_MODEL_START && modelId <= BASE_MODEL_END)
+		{
 			return static_cast<uint32_t>(modelId - BASE_MODEL_START);
 		}
 
 		std::shared_lock lock(m_mutex);
 		auto it = m_customModelIndices.find(modelId);
-		if (it != m_customModelIndices.end()) {
+		if (it != m_customModelIndices.end())
+		{
 			return it->second;
 		}
 
@@ -133,7 +140,8 @@ inline bool IS_VALID_VEHICLE_MODEL(uint32_t modelid) noexcept
 inline uint32_t VEHICLE_MODEL_INDEX(uint32_t modelid)
 {
 	auto index = VehicleRegistry::Get().GetModelIndex(modelid);
-	if (!index.has_value()) {
+	if (!index.has_value())
+	{
 		throw std::out_of_range("Attempted to resolve handling index for an "
 								"unregistered custom model.");
 	}

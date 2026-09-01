@@ -182,8 +182,7 @@ private:
 					StreamingExtender::FinalizeClump(newModel, pClump);
 					if (pending->colReady && !pending->col.empty()) {
 						ExtendedVeh::Collision::CollisionLoader* colLoader = &ExtendedVeh::Collision::CollisionLoader::Instance();
-						if (!colLoader->LoadCollisionFromMemory(pending->col.data(), pending->col.size(), newModel))
-						{
+						if (!colLoader->LoadCollisionFromMemory(pending->col.data(), pending->col.size(), newModel)) {
 							SendMsg(0xFF8800, std::format("[CustomVeh] Warning: Failed to parse COL for model {}", pending->def.customModelId).c_str());
 						}
 					}
@@ -412,7 +411,8 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD dwReason, LPVOID lpReserved)
 							}
 						}
 					}
-				}, pool);
+				},
+					pool);
 			}
 
 			// Detect new vehicles

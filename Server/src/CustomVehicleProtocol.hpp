@@ -3,12 +3,14 @@
 #include <array>
 #include <cstdint>
 
-namespace CustomVeh::Protocol {
+namespace CustomVeh::Protocol
+{
 constexpr uint16_t VERSION = 2;
 
 constexpr uint8_t PACKET_ID = 251;
 
-enum class Action : uint8_t {
+enum class Action : uint8_t
+{
 	Init = 10,
 	InitResponse = 11,
 
@@ -41,26 +43,30 @@ enum class Action : uint8_t {
 	AssetReady = 59
 };
 
-enum class AssetType : uint8_t {
+enum class AssetType : uint8_t
+{
 	Dff = 0,
 	Txd = 1,
 	Col = 2
 };
 
-enum AssetFlags : uint32_t {
+enum AssetFlags : uint32_t
+{
 	None = 0,
 	HasDff = 1u << 0,
 	HasTxd = 1u << 1,
 	HasCol = 1u << 2
 };
 
-struct Hash256 {
+struct Hash256
+{
 	std::array<uint8_t, 32> bytes {};
 };
 
 #pragma pack(push, 1)
 
-struct AssetDescriptor {
+struct AssetDescriptor
+{
 	AssetType type;
 	uint64_t size;
 	uint32_t compressedSize;
@@ -69,7 +75,8 @@ struct AssetDescriptor {
 	Hash256 sha256;
 };
 
-struct VehicleDefinition {
+struct VehicleDefinition
+{
 	uint32_t protocol;
 	uint32_t customModelId;
 
@@ -86,19 +93,22 @@ struct VehicleDefinition {
 	AssetDescriptor col;
 };
 
-struct VehicleBinding {
+struct VehicleBinding
+{
 	uint32_t protocol;
 
 	uint16_t sampVehicleId;
 	uint32_t customModelId;
 };
 
-struct VehicleUnbinding {
+struct VehicleUnbinding
+{
 	uint32_t protocol;
 	uint16_t sampVehicleId;
 };
 
-struct AssetRequest {
+struct AssetRequest
+{
 	uint32_t protocol;
 
 	uint32_t transferId;
@@ -109,7 +119,8 @@ struct AssetRequest {
 	Hash256 sha256;
 };
 
-struct AssetResume {
+struct AssetResume
+{
 	uint32_t protocol;
 
 	uint32_t transferId;
@@ -122,7 +133,8 @@ struct AssetResume {
 	uint32_t nextChunk;
 };
 
-struct AssetBegin {
+struct AssetBegin
+{
 	uint32_t protocol;
 
 	uint32_t transferId;
@@ -139,13 +151,15 @@ struct AssetBegin {
 	Hash256 sha256;
 };
 
-struct AssetChunkHeader {
+struct AssetChunkHeader
+{
 	uint32_t transferId;
 	uint32_t chunkIndex;
 	uint16_t payloadSize;
 };
 
-struct AssetEnd {
+struct AssetEnd
+{
 	uint32_t transferId;
 
 	uint32_t chunkCount;
@@ -153,7 +167,8 @@ struct AssetEnd {
 	Hash256 sha256;
 };
 
-struct AssetVerified {
+struct AssetVerified
+{
 	uint32_t protocol;
 
 	uint32_t transferId;
