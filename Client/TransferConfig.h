@@ -88,7 +88,7 @@ public:
 			fs::create_directories(dir, ec);
 			return dir;
 		}
-		return "samp_model_cache";
+		return "<error>";
 	}
 
 private:

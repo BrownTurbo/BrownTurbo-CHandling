@@ -11,7 +11,6 @@
 #include "game_sa/CVisibilityPlugins.h"
 #include "game_sa/NodeName.h"
 #include "game_sa/common.h"
-#include "injector/injector.hpp"
 #include "safetyhook/safetyhook.hpp"
 #include "plugin.h"
 

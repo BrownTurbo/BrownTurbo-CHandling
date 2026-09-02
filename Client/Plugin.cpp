@@ -24,7 +24,6 @@
 #include <RakNet/PacketEnumerations.h>
 #include <RakNet/StringCompressor.h>
 
-#include <d3d9.h>
 #include <atomic>
 #include <chrono>
 #include <condition_variable>

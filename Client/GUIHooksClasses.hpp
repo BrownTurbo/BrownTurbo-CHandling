@@ -21,11 +21,14 @@ public:
 	bool add(FunctionPtrT detour, bool enable = true)
 	{
 		_create_status = MH_CreateHook(reinterpret_cast<void*>(_target), detour, reinterpret_cast<void**>(&_original));
+		if (_create_status != MH_OK)
+			return false;
+
 		if (!enable)
-			return _create_status == MH_OK;
+			return true;
 		auto enabled = MH_EnableHook(reinterpret_cast<void*>(_target));
 
-		return _create_status == MH_OK && enabled == MH_OK;
+		return enabled == MH_OK;
 	}
 
 	void set_adr(std::uintptr_t target) { _target = target; }
@@ -41,6 +44,8 @@ public:
 	template <typename... Args>
 	auto call_original(Args&&... args) const
 	{
+		if (!_original)
+			return decltype((*_original)(std::forward<Args>(args)...))();
 		return (*_original)(std::forward<Args>(args)...);
 	}
 

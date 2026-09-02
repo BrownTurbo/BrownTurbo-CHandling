@@ -112,6 +112,9 @@ void RenderTransferWindow()
 
 HRESULT __stdcall hkReset(IDirect3DDevice9* pDevice, D3DPRESENT_PARAMETERS* pp)
 {
+	if (!oReset)
+		return D3DERR_INVALIDCALL;
+
 	const bool wasInitialized = g_bwasInitialized;
 	if (wasInitialized) {
 		ImGui_ImplDX9_InvalidateDeviceObjects();
@@ -147,8 +150,14 @@ LRESULT CALLBACK hkWndProc(HWND hwnd, UINT u_msg, WPARAM w_param, LPARAM l_param
 HRESULT __stdcall hkEndScene(IDirect3DDevice9* pDevice)
 {
 	if (!g_bwasInitialized) {
-		D3DDEVICE_CREATION_PARAMETERS d3dcp;
-		pDevice->GetCreationParameters(&d3dcp);
+		if (!pDevice)
+			return oEndScene ? oEndScene(pDevice) : D3DERR_INVALIDCALL;
+
+		D3DDEVICE_CREATION_PARAMETERS d3dcp {};
+		if (FAILED(pDevice->GetCreationParameters(&d3dcp)) ||
+			!IsWindow(d3dcp.hFocusWindow))
+			return oEndScene ? oEndScene(pDevice) : D3DERR_INVALIDCALL;
+
 		hWnd = d3dcp.hFocusWindow;
 
 		ImGui::CreateContext();
@@ -158,8 +167,10 @@ HRESULT __stdcall hkEndScene(IDirect3DDevice9* pDevice)
 		io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 		io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
 
-		ImGui_ImplWin32_Init(hWnd);
-		ImGui_ImplDX9_Init(pDevice);
+		if (!ImGui_ImplWin32_Init(hWnd) || !ImGui_ImplDX9_Init(pDevice)) {
+			ImGui::DestroyContext();
+			return oEndScene ? oEndScene(pDevice) : D3DERR_INVALIDCALL;
+		}
 
 		ImVector<ImWchar> ranges;
 		ImFontGlyphRangesBuilder builder;
@@ -177,7 +188,7 @@ HRESULT __stdcall hkEndScene(IDirect3DDevice9* pDevice)
 
 		if (!g_wndProcHooked) {
 			oWndProc = reinterpret_cast<WNDPROC>(SetWindowLongPtrA(
-				d3dcp.hFocusWindow, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(hkWndProc)));
+				hWnd, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(hkWndProc)));
 			g_wndProcHooked = oWndProc != nullptr;
 		}
 
@@ -198,7 +209,7 @@ HRESULT __stdcall hkEndScene(IDirect3DDevice9* pDevice)
 		ImGui::Render();
 		ImGui_ImplDX9_RenderDrawData(ImGui::GetDrawData());
 	}
-	return oEndScene(pDevice);
+	return oEndScene ? oEndScene(pDevice) : D3DERR_INVALIDCALL;
 }
 
 void BackgroundInitializationWorker()
