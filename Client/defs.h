@@ -1,4 +1,5 @@
 #pragma once
+#include <cstdint>
 
 #pragma pack(push, 1)
 struct RPC_WorldVehicleAdd_Data {
@@ -34,14 +35,6 @@ struct CustomVehicleDef {
 	char txdHash[65]; // SHA-256 Hex String + Null Terminator
 	char colUrl[128];
 	char colHash[65];
-};
-
-struct VehicleCacheEntry {
-	uint16_t sampVehicleId;
-	CVehicle* gameVehicle;
-
-	uint32_t logicalModelId;
-	uint32_t gtaModelId;
 };
 #pragma pack(pop)
 
