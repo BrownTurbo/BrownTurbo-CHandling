@@ -1,0 +1,47 @@
+if(NOT DEFINED TRGT)
+    message(FATAL_ERROR "CopyRuntimeDlls.cmake: TRGT variable not provided")
+endif()
+if(NOT DEFINED DEST)
+    message(FATAL_ERROR "CopyRuntimeDlls.cmake: DEST variable not provided")
+endif()
+
+if(TRGT STREQUAL "" OR TRGT STREQUAL "NOTFOUND")
+    message(STATUS "CopyRuntimeDlls: no source directory provided - skipping.")
+    return()
+endif()
+
+if(NOT EXISTS "${TRGT}")
+    message(WARNING "CopyRuntimeDlls: source directory does not exist: ${TRGT}")
+    return()
+endif()
+
+file(MAKE_DIRECTORY "${DEST}")
+
+file(GLOB_RECURSE _foundDLLS "${TRGT}/*.dll")
+file(GLOB_RECURSE _foundPDBS "${TRGT}/*.pdb")
+
+set(_foundRTFiles "")
+list(APPEND _foundRTFiles ${_foundDLLS})
+list(APPEND _foundRTFiles ${_foundPDBS})
+
+list(LENGTH _foundRTFiles _rtCount)
+if(_rtCount EQUAL 0)
+    message(STATUS "CopyRuntimeDlls: no .dll/.pdb files found under ${TRGT} - skipping.")
+    return()
+endif()
+
+set(_copied_any FALSE)
+foreach(_file IN LISTS _foundRTFiles)
+    if(NOT _file STREQUAL "" AND EXISTS "${_file}")
+        get_filename_component(_file_name "${_file}" NAME)
+        message(STATUS "CopyRuntimeDlls: ${_file_name} -> ${DEST}")
+        file(COPY_FILE "${_file}" "${DEST}/${_file_name}" ONLY_IF_DIFFERENT)
+        set(_copied_any TRUE)
+    else()
+        message(WARNING "CopyRuntimeDlls: resolved path does not exist on disk: ${_file}")
+    endif()
+endforeach()
+
+if(NOT _copied_any)
+    message(STATUS "CopyRuntimeDlls: file list was non-empty but no files copied.")
+endif()

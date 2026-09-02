@@ -214,3 +214,15 @@ function(force_dynamic_runtime_on_all_targets dir)
 endfunction()
 
 force_dynamic_runtime_on_all_targets(${CMAKE_CURRENT_SOURCE_DIR})
+
+if(DEFINED WIN32)
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND}
+            "-DTRGT=${CMAKE_SOURCE_DIR}/vcpkg_installed/x86-windows/bin"
+            "-DDEST=${CMAKE_RUNTIME_OUTPUT_DIRECTORY}"
+            -P "${CMAKE_SOURCE_DIR}/CopyRuntimeDlls.cmake"
+        COMMAND_EXPAND_LISTS
+        VERBATIM
+        COMMENT "Resolving and copying runtime DLL dependencies for ${PROJECT_NAME}..."
+    )
+endif()

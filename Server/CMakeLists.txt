@@ -298,3 +298,15 @@ add_definitions(-DHAVE_STDINT_H=1 -DPAWN_CELL_SIZE=64)
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++20")
 endif()
+
+if(DEFINED WIN32)
+    add_custom_command(TARGET ${COMPONENT_NAME_LOWERCASE} POST_BUILD
+        COMMAND ${CMAKE_COMMAND}
+            "-DTRGT=${CMAKE_SOURCE_DIR}/vcpkg_installed/x86-windows/bin"
+            "-DDEST=${CMAKE_RUNTIME_OUTPUT_DIRECTORY}"
+            -P "${CMAKE_SOURCE_DIR}/CopyRuntimeDlls.cmake"
+        COMMAND_EXPAND_LISTS
+        VERBATIM
+        COMMENT "Resolving and copying runtime DLL dependencies for ${COMPONENT_NAME_LOWERCASE}..."
+    )
+endif()

@@ -376,7 +376,8 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD dwReason, LPVOID lpReserved)
 	case DLL_PROCESS_ATTACH: {
 		DisableThreadLibraryCalls(hModule);
 
-		Events::initGameEvent += []() {
+		Plugn = std::make_unique<c_plugin>(hModule);
+		Events::initGameEvent += [hModule]() {
 			static bool threadSpawned = false;
 			if (!threadSpawned) {
 				threadSpawned = true;
@@ -403,7 +404,7 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD dwReason, LPVOID lpReserved)
 					using T = std::decay_t<decltype(p)>;
 					if constexpr (!std::is_same_v<T, std::nullptr_t>) {
 						if (p) {
-							for (uint16_t id = 0; id < p->m_nCount; ++id) {
+							for (uint16_t id = 0; id < (std::min)(static_cast<uint16_t>(p->m_nCount), static_cast<uint16_t>(MAX_SAMP_VEHICLES)); ++id) {
 								auto* sampVeh = p->Get(id);
 								if (sampVeh && sampVeh->m_pGameVehicle) {
 									currentVehicles.push_back(sampVeh->m_pGameVehicle);
@@ -475,7 +476,6 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD dwReason, LPVOID lpReserved)
 				s_prevLocalVehicle = curVehicle;
 			}
 		};
-		Plugn = std::make_unique<c_plugin>(hModule);
 		break;
 	}
 	case DLL_PROCESS_DETACH: {
@@ -488,6 +488,7 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD dwReason, LPVOID lpReserved)
 			rakhook::destroy();
 		}
 
+		Plugn->shutdown_for_unload();
 		Plugn.reset();
 		break;
 	}
