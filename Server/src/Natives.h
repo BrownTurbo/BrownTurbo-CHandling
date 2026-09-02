@@ -12,6 +12,7 @@
 #include "extendedveh.h"
 #include "CustomVehicleBindingRegistry.h"
 #include "CVehicleManager.hpp"
+#include "ModelTransferManager.h"
 #include <Server/Components/Pawn/pawn.hpp>
 #include <Server/Components/Pawn/Impl/pawn_natives.hpp>
 

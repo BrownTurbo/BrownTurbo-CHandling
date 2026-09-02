@@ -8,7 +8,7 @@
 #include "HandlingManager.h"
 #include "Hooks.hpp"
 #include "ModelTransferManager.h"
-#include "Natives.hpp"
+#include "Natives.h"
 #include "PacketEnum.h"
 
 #include <pawn-natives/NativeFunc.hpp>
