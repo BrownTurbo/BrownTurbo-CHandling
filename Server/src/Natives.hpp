@@ -11,6 +11,7 @@
 #include "Hooks.hpp"
 #include "extendedveh.h"
 #include "CustomVehicleBindingRegistry.h"
+#include "CVehicleManager.hpp"
 #include <Server/Components/Pawn/pawn.hpp>
 #include <Server/Components/Pawn/Impl/pawn_natives.hpp>
 
@@ -134,12 +135,16 @@ SCRIPT_API(IsPlayerUsingCHandling, bool(IPlayer& player))
 // native ResetModelHandling(modelid);
 SCRIPT_API(ResetModelHandling, bool(int modelid))
 {
+	if (!CVehicleMgr::VehicleRegistry::Get().IsValidVehicleModel(modelid))
+		return false;
 	return HandlingMgr::ResetModelHandling(modelid);
 }
 
 // native ResetVehicleHandling(vehicleid);
 SCRIPT_API(ResetVehicleHandling, bool(IVehicle& vehicle))
 {
+	if (!CVehicleMgr::VehicleRegistry::Get().IsValidVehicleID(vehicle.getID()))
+		return false;
 	HandlingMgr::ResetVehicleHandling(vehicle);
 	return true;
 }
@@ -147,12 +152,17 @@ SCRIPT_API(ResetVehicleHandling, bool(IVehicle& vehicle))
 // native SetVehicleHandlingFloat(vehicleid, attrib, Float:value);
 SCRIPT_API(SetVehicleHandlingFloat, bool(int vehicleid, CHandlingAttrib attrib, float value))
 {
+	if (!CVehicleMgr::VehicleRegistry::Get().IsValidVehicleID(vehicleid))
+		return false;
 	return HandlingMgr::SetVehicleHandling(static_cast<std::uint16_t>(vehicleid), attrib, value);
 }
 
 // native SetVehicleHandlingInt(vehicleid, attrib, value);
 SCRIPT_API(SetVehicleHandlingInt, bool(int vehicleid, CHandlingAttrib attrib, int value))
 {
+	if (!CVehicleMgr::VehicleRegistry::Get().IsValidVehicleID(vehicleid))
+		return false;
+
 	if (GetHandlingAttributeType(attrib) == TYPE_BYTE)
 		return HandlingMgr::SetVehicleHandling(static_cast<std::uint16_t>(vehicleid), attrib, (uint8_t)value);
 
@@ -162,12 +172,17 @@ SCRIPT_API(SetVehicleHandlingInt, bool(int vehicleid, CHandlingAttrib attrib, in
 // native SetPlayerHandlingFloat(playerid, attrib, Flost:value);
 SCRIPT_API(SetModelHandlingFloat, bool(int modelid, CHandlingAttrib attrib, float value))
 {
+	if (!CVehicleMgr::VehicleRegistry::Get().IsValidVehicleModel(modelid))
+		return false;
 	return HandlingMgr::SetModelHandling((uint16_t)modelid, attrib, value);
 }
 
 // native SetModelHandlingInt(modelid, attrib, value);
 SCRIPT_API(SetModelHandlingInt, bool(int modelid, CHandlingAttrib attrib, int value))
 {
+	if (!CVehicleMgr::VehicleRegistry::Get().IsValidVehicleModel(modelid))
+		return false;
+
 	if (GetHandlingAttributeType(attrib) == TYPE_BYTE)
 		return HandlingMgr::SetModelHandling((uint16_t)modelid, attrib, (uint8_t)value);
 
@@ -178,6 +193,8 @@ SCRIPT_API(SetModelHandlingInt, bool(int modelid, CHandlingAttrib attrib, int va
 SCRIPT_API(GetVehicleHandlingFloat, bool(int vehicleid, CHandlingAttrib attrib, float& value))
 {
 	value = 0.0f;
+	if (!CVehicleMgr::VehicleRegistry::Get().IsValidVehicleID(vehicleid))
+		return false;
 	return HandlingMgr::GetVehicleHandling(static_cast<std::uint16_t>(vehicleid), attrib, value);
 }
 
@@ -185,8 +202,10 @@ SCRIPT_API(GetVehicleHandlingFloat, bool(int vehicleid, CHandlingAttrib attrib, 
 SCRIPT_API(GetVehicleHandlingInt, bool(int vehicleid, CHandlingAttrib attrib, unsigned int& value))
 {
 	value = 0;
-	bool ret = false;
+	if (!CVehicleMgr::VehicleRegistry::Get().IsValidVehicleID(vehicleid))
+		return false;
 
+	bool ret = false;
 	if (GetHandlingAttributeType(attrib) == TYPE_BYTE)
 	{
 		uint8_t byteVal = 0;
@@ -204,6 +223,8 @@ SCRIPT_API(GetVehicleHandlingInt, bool(int vehicleid, CHandlingAttrib attrib, un
 SCRIPT_API(GetModelHandlingFloat, bool(int modelid, CHandlingAttrib attrib, float& value))
 {
 	value = 0.0f;
+	if (!CVehicleMgr::VehicleRegistry::Get().IsValidVehicleModel(modelid))
+		return false;
 	return HandlingMgr::GetModelHandling((uint16_t)modelid, attrib, value);
 }
 
@@ -211,8 +232,10 @@ SCRIPT_API(GetModelHandlingFloat, bool(int modelid, CHandlingAttrib attrib, floa
 SCRIPT_API(GetModelHandlingInt, bool(int modelid, CHandlingAttrib attrib, unsigned int& value))
 {
 	value = 0;
-	bool ret = false;
+	if (!CVehicleMgr::VehicleRegistry::Get().IsValidVehicleModel(modelid))
+		return false;
 
+	bool ret = false;
 	if (GetHandlingAttributeType(attrib) == TYPE_BYTE)
 	{
 		uint8_t byteVal = 0;
@@ -230,14 +253,19 @@ SCRIPT_API(GetModelHandlingInt, bool(int modelid, CHandlingAttrib attrib, unsign
 SCRIPT_API(GetDefaultHandlingFloat, bool(int modelid, CHandlingAttrib attrib, float& value))
 {
 	value = 0.0f;
+	if (!CVehicleMgr::VehicleRegistry::Get().IsValidVehicleModel(modelid))
+		return false;
 	return HandlingMgr::GetDefaultHandling((uint16_t)modelid, attrib, value);
 }
 
 // native GetDefaultHandlingInt(modelid, attrib, &value);
 SCRIPT_API(GetDefaultHandlingInt, bool(int modelid, CHandlingAttrib attrib, unsigned int& value))
 {
-	bool ret = false;
+	value = 0;
+	if (!CVehicleMgr::VehicleRegistry::Get().IsValidVehicleModel(modelid))
+		return false;
 
+	bool ret = false;
 	if (GetHandlingAttributeType(attrib) == TYPE_BYTE)
 	{
 		uint8_t byteVal = 0;
@@ -479,12 +507,16 @@ SCRIPT_API(ResetAllHandling, bool(IPlayer& player))
 // native IsCustomVehicleModel(modelid);
 SCRIPT_API(IsCustomVehicleModel, bool(int modelid))
 {
+	if (!CVehicleMgr::VehicleRegistry::Get().IsValidVehicleModel(modelid))
+		return false;
 	return HandlingMgr::IsCustomVehicle(static_cast<std::uint32_t>(modelid));
 }
 
 // native IsVehicleCustom(vehicleid);
 SCRIPT_API(IsVehicleCustom, bool(int vehicleid))
 {
+	if (!CVehicleMgr::VehicleRegistry::Get().IsValidVehicleID(vehicleid))
+		return false;
 	ExtendedVehCompo* compo = ExtendedVehCompo::get();
 	if (!compo)
 		return false;
@@ -497,6 +529,10 @@ SCRIPT_API(IsVehicleCustom, bool(int vehicleid))
 // native BindVehicleModel(vehicleid, customModelId);
 SCRIPT_API(BindVehicleModel, bool(int vehicleid, int customModelId))
 {
+	if (!CVehicleMgr::VehicleRegistry::Get().IsValidVehicleID(vehicleid))
+		return false;
+	if (!CVehicleMgr::VehicleRegistry::Get().IsValidVehicleModel(customModelId))
+		return false;
 	ExtendedVehCompo* compo = ExtendedVehCompo::get();
 	if (!compo)
 		return false;
@@ -521,7 +557,7 @@ SCRIPT_API(GetFileSha256, bool(const std::string& filename, std::string& outHash
 // native InvalidateModelCache(modelid, fileKind);
 SCRIPT_API(InvalidateModelCache, bool(int modelId, int kind))
 {
-	if (modelId < 0)
+	if (!CVehicleMgr::VehicleRegistry::Get().IsValidVehicleModel(modelId))
 		return false;
 	ModelTransferMgr::InvalidateCache(static_cast<uint32_t>(modelId), static_cast<ModelFileKind>(kind));
 	return true;
