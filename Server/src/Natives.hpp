@@ -252,55 +252,151 @@ SCRIPT_API(GetDefaultHandlingInt, bool(int modelid, CHandlingAttrib attrib, unsi
 }
 
 // native SetPlayerHandlingFloat(playerid, attrib, Float:value);
-SCRIPT_API(SetPlayerHandlingFloat, bool(int playerid, CHandlingAttrib attrib, float value))
+SCRIPT_API(SetPlayerHandlingFloat, bool(IPlayer& player, CHandlingAttrib attrib, float value))
 {
-	return HandlingMgr::SetPlayerHandling(static_cast<std::uint16_t>(playerid), attrib, value);
+	ExtendedVehCompo* compo = ExtendedVehCompo::get();
+	if (!compo)
+		return false;
+	ICore* core_ = compo->getCore();
+	if (!core_)
+		return false;
+	const auto& players_ = core_->getPlayers().players();
+	int playerid = player.getID();
+	for (auto it = players_.begin(); it != players_.end(); ++it)
+	{
+		IPlayer* player_ = *it;
+		if (player_->getID() == playerid)
+		{
+			return HandlingMgr::SetPlayerHandling(static_cast<std::uint16_t>(playerid), attrib, value);
+		}
+	}
+	return false;
 }
 
 // native ResetAllHandlingForPlayer(playerid);
-SCRIPT_API(ResetAllHandlingForPlayer, bool(int playerid))
+SCRIPT_API(ResetAllHandlingForPlayer, bool(IPlayer& player))
 {
-	return HandlingMgr::ResetAll(static_cast<std::uint16_t>(playerid));
+	ExtendedVehCompo* compo = ExtendedVehCompo::get();
+	if (!compo)
+		return false;
+	ICore* core_ = compo->getCore();
+	if (!core_)
+		return false;
+	const auto& players_ = core_->getPlayers().players();
+	int playerid = player.getID();
+	for (auto it = players_.begin(); it != players_.end(); ++it)
+	{
+		IPlayer* player_ = *it;
+		if (player_->getID() == playerid)
+		{
+			return HandlingMgr::ResetAll(static_cast<std::uint16_t>(playerid));
+		}
+	}
+	return false;
 }
 
 // native SetPlayerHandlingInt(playerid, attrib, value);
-SCRIPT_API(SetPlayerHandlingInt, bool(int playerid, CHandlingAttrib attrib, int value))
+SCRIPT_API(SetPlayerHandlingInt, bool(IPlayer& player, CHandlingAttrib attrib, int value))
 {
-	if (GetHandlingAttributeType(attrib) == TYPE_BYTE)
-		return HandlingMgr::SetPlayerHandling(static_cast<std::uint16_t>(playerid), attrib, (uint8_t)value);
-	return HandlingMgr::SetPlayerHandling(static_cast<std::uint16_t>(playerid), attrib, (unsigned int)value);
+	ExtendedVehCompo* compo = ExtendedVehCompo::get();
+	if (!compo)
+		return false;
+	ICore* core_ = compo->getCore();
+	if (!core_)
+		return false;
+	const auto& players_ = core_->getPlayers().players();
+	int playerid = player.getID();
+	for (auto it = players_.begin(); it != players_.end(); ++it)
+	{
+		IPlayer* player_ = *it;
+		if (player_->getID() == playerid)
+		{
+			if (GetHandlingAttributeType(attrib) == TYPE_BYTE)
+				return HandlingMgr::SetPlayerHandling(static_cast<std::uint16_t>(playerid), attrib, (uint8_t)value);
+			return HandlingMgr::SetPlayerHandling(static_cast<std::uint16_t>(playerid), attrib, (unsigned int)value);
+		}
+	}
+	return false;
 }
 
 // native GetPlayerHandlingFloat(playerid, attrib, &Float:value);
-SCRIPT_API(GetPlayerHandlingFloat, bool(int playerid, CHandlingAttrib attrib, float& value))
+SCRIPT_API(GetPlayerHandlingFloat, bool(IPlayer& player, CHandlingAttrib attrib, float& value))
 {
 	value = 0.0f;
-	return HandlingMgr::GetPlayerHandling(static_cast<std::uint16_t>(playerid), attrib, value);
+	ExtendedVehCompo* compo = ExtendedVehCompo::get();
+	if (!compo)
+		return false;
+	ICore* core_ = compo->getCore();
+	if (!core_)
+		return false;
+	const auto& players_ = core_->getPlayers().players();
+	int playerid = player.getID();
+	for (auto it = players_.begin(); it != players_.end(); ++it)
+	{
+		IPlayer* player_ = *it;
+		if (player_->getID() == playerid)
+		{
+			return HandlingMgr::GetPlayerHandling(static_cast<std::uint16_t>(playerid), attrib, value);
+		}
+	}
+	return false;
 }
 
 // native GetPlayerHandlingInt(playerid, attrib, &value);
-SCRIPT_API(GetPlayerHandlingInt, bool(int playerid, CHandlingAttrib attrib, unsigned int& value))
+SCRIPT_API(GetPlayerHandlingInt, bool(IPlayer& player, CHandlingAttrib attrib, unsigned int& value))
 {
 	value = 0;
-	bool ret = false;
+	ExtendedVehCompo* compo = ExtendedVehCompo::get();
+	if (!compo)
+		return false;
+	ICore* core_ = compo->getCore();
+	if (!core_)
+		return false;
+	const auto& players_ = core_->getPlayers().players();
+	int playerid = player.getID();
+	for (auto it = players_.begin(); it != players_.end(); ++it)
+	{
+		IPlayer* player_ = *it;
+		if (player_->getID() == playerid)
+		{
+			bool ret = false;
 
-	if (GetHandlingAttributeType(attrib) == TYPE_BYTE)
-	{
-		uint8_t byteVal = 0;
-		ret = HandlingMgr::GetPlayerHandling(static_cast<std::uint16_t>(playerid), attrib, byteVal);
-		value = byteVal;
+			if (GetHandlingAttributeType(attrib) == TYPE_BYTE)
+			{
+				uint8_t byteVal = 0;
+				ret = HandlingMgr::GetPlayerHandling(static_cast<std::uint16_t>(playerid), attrib, byteVal);
+				value = byteVal;
+			}
+			else
+			{
+				ret = HandlingMgr::GetPlayerHandling(static_cast<std::uint16_t>(playerid), attrib, value);
+			}
+			return ret;
+		}
 	}
-	else
-	{
-		ret = HandlingMgr::GetPlayerHandling(static_cast<std::uint16_t>(playerid), attrib, value);
-	}
-	return ret;
+	return false;
 }
 
 // native ResetPlayerHandling(playerid);
-SCRIPT_API(ResetPlayerHandling, bool(int playerid))
+SCRIPT_API(ResetPlayerHandling, bool(IPlayer& player))
 {
-	return HandlingMgr::ResetPlayerHandling(static_cast<std::uint16_t>(playerid));
+	ExtendedVehCompo* compo = ExtendedVehCompo::get();
+	if (!compo)
+		return false;
+	ICore* core_ = compo->getCore();
+	if (!core_)
+		return false;
+	const auto& players_ = core_->getPlayers().players();
+	int playerid = player.getID();
+	for (auto it = players_.begin(); it != players_.end(); ++it)
+	{
+		IPlayer* player_ = *it;
+		if (player_->getID() == playerid)
+		{
+			return HandlingMgr::ResetPlayerHandling(static_cast<std::uint16_t>(playerid));
+		}
+	}
+	return false;
 }
 
 // native BeginCustomVehicleDef(customModelId, visualBase, audioBase, handlingBase, engineSoundId);
@@ -359,9 +455,25 @@ SCRIPT_API(DestroyCustomVehicle, bool(int customModelId))
 }
 
 // native ResetAllHandling(playerid);
-SCRIPT_API(ResetAllHandling, bool(int playerid))
+SCRIPT_API(ResetAllHandling, bool(IPlayer& player))
 {
-	return HandlingMgr::ResetAll(static_cast<std::uint16_t>(playerid));
+	ExtendedVehCompo* compo = ExtendedVehCompo::get();
+	if (!compo)
+		return false;
+	ICore* core_ = compo->getCore();
+	if (!core_)
+		return false;
+	const auto& players_ = core_->getPlayers().players();
+	int playerid = player.getID();
+	for (auto it = players_.begin(); it != players_.end(); ++it)
+	{
+		IPlayer* player_ = *it;
+		if (player_->getID() == playerid)
+		{
+			return HandlingMgr::ResetAll(static_cast<std::uint16_t>(playerid));
+		}
+	}
+	return false;
 }
 
 // native IsCustomVehicleModel(modelid);
@@ -417,7 +529,23 @@ SCRIPT_API(InvalidateModelCache, bool(int modelId, int kind))
 
 // native GetClientFileStoreStatus(playerid, modelId, fileKind);
 // 0=unknown, 1=success, 2=failure
-SCRIPT_API(GetClientFileStoreStatus, int(int playerid, int modelId, int kind))
+SCRIPT_API(GetClientFileStoreStatus, int(IPlayer& player, int modelId, int kind))
 {
-	return ModelTransferMgr::GetClientFileStoreStatus(playerid, static_cast<uint32_t>(modelId), static_cast<ModelFileKind>(kind));
+	ExtendedVehCompo* compo = ExtendedVehCompo::get();
+	if (!compo)
+		return 0;
+	ICore* core_ = compo->getCore();
+	if (!core_)
+		return 0;
+	const auto& players_ = core_->getPlayers().players();
+	int playerid = player.getID();
+	for (auto it = players_.begin(); it != players_.end(); ++it)
+	{
+		IPlayer* player_ = *it;
+		if (player_->getID() == playerid)
+		{
+			return ModelTransferMgr::GetClientFileStoreStatus(playerid, static_cast<uint32_t>(modelId), static_cast<ModelFileKind>(kind));
+		}
+	}
+	return 0;
 }

@@ -805,11 +805,6 @@ bool CollisionAssetRepository::Scan()
 
 		if (result != Result::Success)
 		{
-			/*
-			 * Do not publish corrupt/invalid assets.
-			 *
-			 * Your server logger should record `error` here.
-			 */
 			continue;
 		}
 
