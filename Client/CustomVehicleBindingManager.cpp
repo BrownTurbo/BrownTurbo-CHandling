@@ -26,31 +26,25 @@ void CustomVehicleBindingManager::Unbind(uint16_t vehicleId)
 	std::lock_guard lock(m_mutex);
 
 	auto it = m_bindings.find(vehicleId);
-	if (it != m_bindings.end()) {
-		uint32_t modelId = it->second.customModelId;
+	if (it == m_bindings.end())
+		return;
 
-		// 1. Tell GTA SA to unload the asset from the streaming pool
-		if (CStreaming::ms_aInfoForModel[modelId].m_nLoadState == LOADSTATE_LOADED) {
-			CStreaming::RemoveModel(modelId);
-		}
+	const Binding binding = it->second;
+	uint32_t modelId = binding.customModelId;
 
-		// 2. Erase custom collision boundaries
-		std::string err_;
-		ExtendedVeh::Collision::CollisionLoader::Instance().Unload(modelId, err_);
-		if (!err_.empty()) {
-			SendMsg(0xFFFFFF, std::format("Error: %s; vehicleId=%d modelId=%d", err_, vehicleId, modelId).c_str());
-		}
-
-		// 3. Clear local cache
-		m_bindings.erase(it);
+	if (CStreaming::ms_aInfoForModel[modelId].m_nLoadState == LOADSTATE_LOADED) {
+		CStreaming::RemoveModel(modelId);
 	}
 
-	// Restore the vehicle's real model before dropping the binding, if we
-	// ever actually applied one - otherwise the live CVehicle is left
-	// pointing at a custom model id that's about to become untracked.
-	if (it->second.modelApplied && it->second.originalModelId >= 0) {
+	std::string err_;
+	ExtendedVeh::Collision::CollisionLoader::Instance().Unload(modelId, err_);
+	if (!err_.empty()) {
+		SendMsg(0xFFFFFF, std::format("Error: %s; vehicleId=%d modelId=%d", err_, vehicleId, modelId).c_str());
+	}
+
+	if (binding.modelApplied && binding.originalModelId >= 0) {
 		if (auto* vehicle = GetGameVehicleFromPool(vehicleId))
-			vehicle->SetModelIndexNoCreate(it->second.originalModelId);
+			vehicle->SetModelIndexNoCreate(binding.originalModelId);
 	}
 
 	m_bindings.erase(it);

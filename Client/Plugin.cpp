@@ -186,7 +186,6 @@ private:
 							SendMsg(0xFF8800, std::format("[CustomVeh] Warning: Failed to parse COL for model {}", pending->def.customModelId).c_str());
 						}
 					}
-
 				} else {
 					CTxdStore::RemoveTxdSlot(txdSlot);
 					SendMsg(0xFF0000, std::format("[CustomVeh] Failed to parse DFF for model {}", pending->def.customModelId).c_str());
@@ -221,6 +220,7 @@ public:
 			if (m_pipeline) {
 				m_pipeline->Shutdown();
 			}
+			StreamingExtender::RestoreHooks();
 			StreamingExtender::ClearAllCustomModels();
 		});
 
