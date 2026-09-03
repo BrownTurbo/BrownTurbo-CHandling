@@ -79,6 +79,7 @@ private:
 	std::atomic<bool> m_pendingClearAll { false };
 	std::queue<uint32_t> m_destructionQueue;
 	std::mutex m_destructionMutex;
+	bool m_runtimeInitialized = false;
 
 	void CreateModelAndBeginDownloads(std::shared_ptr<PendingCustomVehicle> pending)
 	{
@@ -208,14 +209,17 @@ private:
 public:
 	CustomVehiclesASI()
 	{
-		plugin::Events::initRwEvent.Add([this]() {
-			fs::create_directories("models");
-			StreamingExtender::InstallHooks();
-			m_pipeline = std::make_unique<AssetDownloader>(4);
-			AudioExtender::InstallHooks();
+		Events::initRwEvent.Add([this]() {
+			if (!m_runtimeInitialized) {
+				fs::create_directories("models");
+				StreamingExtender::InstallHooks();
+				m_pipeline = std::make_unique<AssetDownloader>(4);
+				AudioExtender::InstallHooks();
+				m_runtimeInitialized = true;
+			}
 		});
 
-		plugin::Events::shutdownRwEvent.Add([this]() {
+		Events::shutdownRwEvent.Add([this]() {
 			if (m_pipeline) {
 				m_pipeline->Shutdown();
 			}
@@ -386,6 +390,7 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD dwReason, LPVOID lpReserved)
 		};
 		static CVehicle* s_prevLocalVehicle = nullptr;
 		Events::gameProcessEvent += []() {
+			Plugn->game_loop();
 			_customVehInstance.ProcessPendingDefinitions();
 			_customVehInstance.ProcessCompletedDownloads();
 			_customVehInstance.ProcessPendingDestructions();
@@ -455,10 +460,10 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD dwReason, LPVOID lpReserved)
 			// Update previousVehicles for next frame
 			previousVehicles = std::move(currentVehicles);
 
-			// ── Vehicle destructor cleanup ──────────────────────────────────────
+			// Vehicle destructor cleanup
 			HandlingManager::OnVehicleDestructor(nullptr);
 
-			// ── Vehicle enter / exit for local player ───────────────────────────
+			// Vehicle enter / exit for local player
 			auto* localPed = FindPlayerPed();
 			if (!localPed) {
 				s_prevLocalVehicle = nullptr;
@@ -487,7 +492,6 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD dwReason, LPVOID lpReserved)
 			rakhook::destroy();
 		}
 
-		Plugn->shutdown_for_unload();
 		Plugn.reset();
 		break;
 	}

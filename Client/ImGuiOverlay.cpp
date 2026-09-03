@@ -232,12 +232,14 @@ void BackgroundInitializationWorker()
 
 void c_plugin::game_loop()
 {
-	game_loop_hook.call_original();
-
+	static bool configLoaded = false;
+	if (!configLoaded) {
+		configLoaded = true;
+		TransferConfig::Instance().Load();
+	}
 	static bool threadSpawned = false;
 	if (!threadSpawned) {
 		threadSpawned = true;
-		TransferConfig::Instance().Load();
 		g_initializationThread = std::thread(BackgroundInitializationWorker);
 	}
 }
@@ -269,14 +271,12 @@ void c_plugin::shutdown_for_unload()
 		imGuiOn = false;
 		g_bwasInitialized = false;
 	}
-
-	game_loop_hook.remove();
 }
 
 c_plugin::c_plugin(HMODULE hmodule)
 	: hmodule(hmodule)
 {
-	game_loop_hook.add(&c_plugin::game_loop);
+	// Constructor does nothing.
 }
 
 c_plugin::~c_plugin()

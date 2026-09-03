@@ -36,12 +36,10 @@ public:
 
 	static void game_loop();
 	static void shutdown_for_unload();
-	static c_hook<void (*)()> game_loop_hook;
 
 private:
 	HMODULE hmodule;
 };
-inline c_hook<void (*)()> c_plugin::game_loop_hook = { 0x561B10 };
 inline bool g_bwasInitialized = false;
 inline bool imGuiOn = false;
 inline bool g_windowVisible = false;
