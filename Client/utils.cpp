@@ -275,30 +275,19 @@ bool IsVehicleStreamedForLocalPlayer(CVehicle* gtaVeh)
 
 bool IsExecutableAddress(uintptr_t address)
 {
-    MEMORY_BASIC_INFORMATION mbi{};
+	MEMORY_BASIC_INFORMATION mbi {};
 
-    if (!VirtualQuery(
-            reinterpret_cast<void*>(
-                address),
-            &mbi,
-            sizeof(mbi)))
-    {
-        return false;
-    }
+	if (!VirtualQuery(
+			reinterpret_cast<void*>(
+				address),
+			&mbi,
+			sizeof(mbi))) {
+		return false;
+	}
 
-    const auto protect =
-        mbi.Protect;
+	const auto protect = mbi.Protect;
 
-    return
-        mbi.State == MEM_COMMIT &&
-        !(protect & PAGE_NOACCESS) &&
-        !(protect & PAGE_GUARD) &&
-        (
-            protect == PAGE_EXECUTE ||
-            protect == PAGE_EXECUTE_READ ||
-            protect == PAGE_EXECUTE_READWRITE ||
-            protect == PAGE_EXECUTE_WRITECOPY
-        );
+	return mbi.State == MEM_COMMIT && !(protect & PAGE_NOACCESS) && !(protect & PAGE_GUARD) && (protect == PAGE_EXECUTE || protect == PAGE_EXECUTE_READ || protect == PAGE_EXECUTE_READWRITE || protect == PAGE_EXECUTE_WRITECOPY);
 }
 
 bool IsInsideMainModule(uintptr_t address)

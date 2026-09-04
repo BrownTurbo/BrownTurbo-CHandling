@@ -154,8 +154,7 @@ HRESULT __stdcall hkEndScene(IDirect3DDevice9* pDevice)
 			return oEndScene ? oEndScene(pDevice) : D3DERR_INVALIDCALL;
 
 		D3DDEVICE_CREATION_PARAMETERS d3dcp {};
-		if (FAILED(pDevice->GetCreationParameters(&d3dcp)) ||
-			!IsWindow(d3dcp.hFocusWindow))
+		if (FAILED(pDevice->GetCreationParameters(&d3dcp)) || !IsWindow(d3dcp.hFocusWindow))
 			return oEndScene ? oEndScene(pDevice) : D3DERR_INVALIDCALL;
 
 		hWnd = d3dcp.hFocusWindow;

@@ -201,7 +201,8 @@ uint16_t HandlingManager::GetVehicleSAMPId(CVehicle* pVehicle)
 					}
 				}
 			}
-		}, pool);
+		},
+			pool);
 		if (foundId != 0xFFFF) {
 			CacheVehicleSAMPId(pVehicle, foundId);
 			return foundId;
@@ -493,9 +494,7 @@ void HandlingManager::ApplyModelToVehicles(uint16_t modelId, tHandlingData* hand
 					if (gtaVeh->m_nModelIndex != modelId)
 						continue;
 
-					if (m_vehicleHandlings.find(id) == m_vehicleHandlings.end() &&
-						m_playerAppliedHandlings.find(id) == m_playerAppliedHandlings.end() &&
-						m_customHandlings.find(gtaVeh) == m_customHandlings.end()) {
+					if (m_vehicleHandlings.find(id) == m_vehicleHandlings.end() && m_playerAppliedHandlings.find(id) == m_playerAppliedHandlings.end() && m_customHandlings.find(gtaVeh) == m_customHandlings.end()) {
 						gtaVeh->m_pHandlingData = handling;
 						gtaVeh->m_fTurnMass = handling->m_fTurnMass;
 						gtaVeh->m_fMass = handling->m_fMass;
@@ -505,7 +504,8 @@ void HandlingManager::ApplyModelToVehicles(uint16_t modelId, tHandlingData* hand
 				}
 			}
 		}
-	}, pool);
+	},
+		pool);
 }
 
 void HandlingManager::RevertModelToOriginal(uint16_t modelId)
@@ -531,9 +531,7 @@ void HandlingManager::RevertModelToOriginal(uint16_t modelId)
 					if (gtaVeh->m_nModelIndex != modelId)
 						continue;
 
-					if (m_vehicleHandlings.find(id) == m_vehicleHandlings.end() &&
-						m_playerAppliedHandlings.find(id) == m_playerAppliedHandlings.end() &&
-						m_customHandlings.find(gtaVeh) == m_customHandlings.end()) {
+					if (m_vehicleHandlings.find(id) == m_vehicleHandlings.end() && m_playerAppliedHandlings.find(id) == m_playerAppliedHandlings.end() && m_customHandlings.find(gtaVeh) == m_customHandlings.end()) {
 						gtaVeh->m_pHandlingData = original;
 						gtaVeh->m_fMass = original->m_fMass;
 						gtaVeh->m_fTurnMass = original->m_fTurnMass;
@@ -541,7 +539,8 @@ void HandlingManager::RevertModelToOriginal(uint16_t modelId)
 				}
 			}
 		}
-	}, pool);
+	},
+		pool);
 }
 
 void HandlingManager::ApplyPlayerHandling(uint16_t playerId, CVehicle* pVehicle)

@@ -6,9 +6,9 @@
 #include <game_sa/CVehicleModelInfo.h>
 #include <plugin_sa.h>
 #include <cstdint>
+#include <mutex>
 #include <optional>
 #include <unordered_map>
-#include <mutex>
 
 #include "defs.h"
 
@@ -17,19 +17,19 @@
 class AudioExtender {
 private:
 	struct CustomVehicleAudioDefinition {
-		int32_t audioModelId  = -1;
-		int16_t engineOnSoundBankId  = -1;
-		int16_t engineOffSoundBankId  = -1;
-		int16_t accelerateSoundBankId  = -1;
-		int16_t decelerateSoundBankId  = -1;
+		int32_t audioModelId = -1;
+		int16_t engineOnSoundBankId = -1;
+		int16_t engineOffSoundBankId = -1;
+		int16_t accelerateSoundBankId = -1;
+		int16_t decelerateSoundBankId = -1;
 	};
 	struct CustomVehicleAudioRuntime {
 		CAESound engineSound;
-		bool initialized  = false;
-		bool playing  = false;
+		bool initialized = false;
+		bool playing = false;
 		bool active = false;
-		short bankSlotId  = -1;
-		short sfxId  = -1;
+		short bankSlotId = -1;
+		short sfxId = -1;
 		std::uint16_t vehicleId {};
 	};
 	struct CustomVehicleAudioState {
@@ -38,7 +38,7 @@ private:
 	};
 
 	static inline std::unordered_map<uint16_t, CustomVehicleAudioState> s_vehicleAudio;
-	static inline std::unordered_map<uint32_t, CustomVehicleAudioDefinition>s_customAudioMap;
+	static inline std::unordered_map<uint32_t, CustomVehicleAudioDefinition> s_customAudioMap;
 	static inline std::mutex s_audioMutex;
 	// using InitVehicleAudioFn = void(__thiscall*)(CAEVehicleAudioEntity*, void*, CVehicle*);
 	// static inline safetyhook::InlineHook s_initVehicleAudioHook;
