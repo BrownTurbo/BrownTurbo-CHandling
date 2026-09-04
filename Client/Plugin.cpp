@@ -380,7 +380,7 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD dwReason, LPVOID lpReserved)
 		DisableThreadLibraryCalls(hModule);
 
 		Plugn = std::make_unique<c_plugin>(hModule);
-		Events::initGameEvent += [hModule]() {
+		Events::initGameEvent += []() {
 			static bool threadSpawned = false;
 			if (!threadSpawned) {
 				threadSpawned = true;
