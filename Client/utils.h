@@ -11,6 +11,7 @@
 #include <RakHook/rakhook.hpp>
 #include <RakHook/samp.hpp>
 
+#include <windows.h>
 #include <cstdint>
 #include <variant>
 
@@ -36,3 +37,8 @@ CVehicle* GetGameVehicleFromPool(uint16_t sampVehicleId);
 bool IsGameInitialized();
 uint16_t GetLocalPlayerId();
 VehiclePoolVariant GetVehiclesPool();
+bool IsVehicleStreamedForLocalPlayer(CVehicle* gtaVeh);
+bool IsExecutableAddress(uintptr_t address);
+bool IsInsideMainModule(uintptr_t address);
+void* GtaAddress(uintptr_t gtaAddress);
+bool LooksLikeFunctionEntry(uintptr_t address);

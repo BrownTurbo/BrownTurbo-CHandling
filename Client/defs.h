@@ -23,12 +23,23 @@ struct RPC_WorldVehicleAdd_Data {
 	uint8_t zAngle;
 };
 
+struct EngineSound {
+	int16_t OnSound;
+	int16_t OffSound;
+};
+
+struct CelerateSound {
+	int16_t accelerateSound;
+	int16_t decelerateSound;
+};
+
 struct CustomVehicleDef {
 	uint32_t customModelId;
 	uint32_t visualBaseModelId; // Dictates dummy nodes and collision
 	uint32_t audioBaseModelId; // Dictates base audio properties
 	uint32_t handlingBaseModelId; // Dictates physics (acceleration, suspension)
-	int16_t engineSoundId; // Dictates custom engine sound (-1 for audioBase default)
+	EngineSound engineSoundId; // Dictates custom engine sound (-1 for audioBase default)
+	CelerateSound celerateSoundId; // Dictates custom celeration sound
 	char dffUrl[128];
 	char dffHash[65]; // SHA-256 Hex String + Null Terminator
 	char txdUrl[128];
@@ -52,7 +63,7 @@ constexpr uint32_t BASE_MODEL_END = 611;
 constexpr uint32_t BASE_VEHICLE_MODELS = 212; // (611 - 400 + 1)
 constexpr uint32_t CUSTOM_MODEL_BASE_ID = 20000;
 
-constexpr uint32_t MAX_SAMP_VEHICLES = 65535;
+constexpr uint32_t MAX_SAMP_VEHICLES = 2000;
 constexpr uint16_t DEFAULT_MAX_VEHICLES = 2000;
 constexpr uint16_t INVALID_VEHICLE_ID = 0xFFFF;
 constexpr uint16_t INVALID_PLAYER_ID = 0xFFFF;
@@ -62,12 +73,25 @@ inline constexpr bool IsBaseVehicleModel(uint32_t modelId)
 	return modelId >= BASE_MODEL_START && modelId <= BASE_MODEL_END;
 }
 
+inline constexpr bool IsBaseVehicleModel(int modelId)
+{
+	return IsBaseVehicleModel(static_cast<uint32_t>(modelId));
+}
+
 inline constexpr bool IsCustomVehicleModel(uint32_t modelId)
 {
 	return modelId >= CUSTOM_MODEL_BASE_ID;
+}
+
+inline constexpr bool IsCustomVehicleModel(int modelId)
+{
+	return modelId >= 0 && static_cast<uint32_t>(modelId) >= CUSTOM_MODEL_BASE_ID;
 }
 
 inline constexpr uint32_t GetBaseModelIndex(uint32_t modelId)
 {
 	return modelId - BASE_MODEL_START;
 }
+
+class CBaseModelInfo;
+CBaseModelInfo* GetEngineModelInfo(int modelId);

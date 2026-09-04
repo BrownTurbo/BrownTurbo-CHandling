@@ -10,6 +10,7 @@
 
 #include "CustomVehicleBindingManager.h"
 #include "CustomVehicleProtocol.hpp"
+#include "streamingextender.hpp"
 #include <cstring>
 #include <deque>
 #include <map>
@@ -157,7 +158,7 @@ tHandlingData* HandlingManager::ResolveFallbackHandling(uint16_t vehicleId, int 
 		return modelIt->second.get();
 	}
 
-	return static_cast<tHandlingData*>(&gHandlingDataMgr.m_aVehicleHandling[reinterpret_cast<CVehicleModelInfo*>(CModelInfo::GetModelInfo(modelId))->m_nHandlingId]);
+	return static_cast<tHandlingData*>(&gHandlingDataMgr.m_aVehicleHandling[reinterpret_cast<CVehicleModelInfo*>(GetEngineModelInfo(modelId))->m_nHandlingId]);
 }
 
 tHandlingData* HandlingManager::ResolveFallbackHandling(CVehicle* pVehicle, uint16_t vehicleId, int modelId)
@@ -184,10 +185,26 @@ uint16_t HandlingManager::GetVehicleSAMPId(CVehicle* pVehicle)
 		}
 	}
 
-	for (uint32_t id = 0; id < MAX_SAMP_VEHICLES; ++id) {
-		if (GetGameVehicleFromPool(static_cast<uint16_t>(id)) == pVehicle) {
-			CacheVehicleSAMPId(pVehicle, static_cast<uint16_t>(id));
-			return static_cast<uint16_t>(id);
+	auto pool = GetVehiclesPool();
+	if (!std::holds_alternative<std::nullptr_t>(pool)) {
+		uint16_t foundId = 0xFFFF;
+		std::visit([&](auto&& p) {
+			using T = std::decay_t<decltype(p)>;
+			if constexpr (!std::is_same_v<T, std::nullptr_t>) {
+				if (p) {
+					for (uint16_t id = 0; id < (std::min)(static_cast<uint16_t>(p->m_nCount), static_cast<uint16_t>(MAX_SAMP_VEHICLES)); ++id) {
+						auto* sampVeh = p->Get(id);
+						if (sampVeh && sampVeh->m_pGameVehicle == pVehicle) {
+							foundId = id;
+							break;
+						}
+					}
+				}
+			}
+		}, pool);
+		if (foundId != 0xFFFF) {
+			CacheVehicleSAMPId(pVehicle, foundId);
+			return foundId;
 		}
 	}
 	return 0xFFFF;
@@ -448,7 +465,7 @@ void HandlingManager::ResetVehicleHandling(CVehicle* pVehicle)
 	if (it != m_customHandlings.end()) {
 		unsigned int modelIndex = pVehicle->m_nModelIndex;
 
-		auto* vehicleModelInfo = reinterpret_cast<CVehicleModelInfo*>(CModelInfo::GetModelInfo(modelIndex));
+		auto* vehicleModelInfo = reinterpret_cast<CVehicleModelInfo*>(GetEngineModelInfo(modelIndex));
 		if (vehicleModelInfo) {
 			unsigned int handlingId = vehicleModelInfo->m_nHandlingId;
 			pVehicle->m_pHandlingData = static_cast<tHandlingData*>(&gHandlingDataMgr.m_aVehicleHandling[handlingId]);
@@ -460,47 +477,71 @@ void HandlingManager::ResetVehicleHandling(CVehicle* pVehicle)
 
 void HandlingManager::ApplyModelToVehicles(uint16_t modelId, tHandlingData* handling)
 {
-	for (uint32_t id = 0; id < MAX_SAMP_VEHICLES; ++id) {
-		CVehicle* gtaVeh = GetGameVehicleFromPool(static_cast<uint16_t>(id));
-		if (!gtaVeh)
-			continue;
-		if (gtaVeh->m_nModelIndex != modelId)
-			continue;
+	auto pool = GetVehiclesPool();
+	if (std::holds_alternative<std::nullptr_t>(pool))
+		return;
 
-		uint16_t sampId = static_cast<uint16_t>(id);
-		if (m_vehicleHandlings.find(sampId) == m_vehicleHandlings.end() && m_playerAppliedHandlings.find(sampId) == m_playerAppliedHandlings.end() && m_customHandlings.find(gtaVeh) == m_customHandlings.end()) {
+	std::visit([&](auto&& p) {
+		using T = std::decay_t<decltype(p)>;
+		if constexpr (!std::is_same_v<T, std::nullptr_t>) {
+			if (p) {
+				for (uint16_t id = 0; id < (std::min)(static_cast<uint16_t>(p->m_nCount), static_cast<uint16_t>(MAX_SAMP_VEHICLES)); ++id) {
+					auto* sampVeh = p->Get(id);
+					if (!sampVeh || !sampVeh->m_pGameVehicle)
+						continue;
+					CVehicle* gtaVeh = sampVeh->m_pGameVehicle;
+					if (gtaVeh->m_nModelIndex != modelId)
+						continue;
 
-			gtaVeh->m_pHandlingData = handling;
-			gtaVeh->m_fTurnMass = handling->m_fTurnMass;
-			gtaVeh->m_fMass = handling->m_fMass;
-			gtaVeh->m_nHandlingFlagsIntValue = handling->m_nHandlingFlags;
-			gtaVeh->m_vecCentreOfMass = handling->m_vecCentreOfMass;
+					if (m_vehicleHandlings.find(id) == m_vehicleHandlings.end() &&
+						m_playerAppliedHandlings.find(id) == m_playerAppliedHandlings.end() &&
+						m_customHandlings.find(gtaVeh) == m_customHandlings.end()) {
+						gtaVeh->m_pHandlingData = handling;
+						gtaVeh->m_fTurnMass = handling->m_fTurnMass;
+						gtaVeh->m_fMass = handling->m_fMass;
+						gtaVeh->m_nHandlingFlagsIntValue = handling->m_nHandlingFlags;
+						gtaVeh->m_vecCentreOfMass = handling->m_vecCentreOfMass;
+					}
+				}
+			}
 		}
-	}
+	}, pool);
 }
 
 void HandlingManager::RevertModelToOriginal(uint16_t modelId)
 {
-	auto* modelInfo = reinterpret_cast<CVehicleModelInfo*>(CModelInfo::GetModelInfo(modelId));
+	auto* modelInfo = reinterpret_cast<CVehicleModelInfo*>(GetEngineModelInfo(modelId));
 	if (!modelInfo)
 		return;
 	tHandlingData* original = static_cast<tHandlingData*>(&gHandlingDataMgr.m_aVehicleHandling[modelInfo->m_nHandlingId]);
 
-	for (uint32_t id = 0; id < MAX_SAMP_VEHICLES; ++id) {
-		CVehicle* gtaVeh = GetGameVehicleFromPool(static_cast<uint16_t>(id));
-		if (!gtaVeh)
-			continue;
-		if (gtaVeh->m_nModelIndex != modelId)
-			continue;
+	auto pool = GetVehiclesPool();
+	if (std::holds_alternative<std::nullptr_t>(pool))
+		return;
 
-		uint16_t sampId = static_cast<uint16_t>(id);
-		if (m_vehicleHandlings.find(sampId) == m_vehicleHandlings.end() && m_playerAppliedHandlings.find(sampId) == m_playerAppliedHandlings.end() && m_customHandlings.find(gtaVeh) == m_customHandlings.end()) {
+	std::visit([&](auto&& p) {
+		using T = std::decay_t<decltype(p)>;
+		if constexpr (!std::is_same_v<T, std::nullptr_t>) {
+			if (p) {
+				for (uint16_t id = 0; id < (std::min)(static_cast<uint16_t>(p->m_nCount), static_cast<uint16_t>(MAX_SAMP_VEHICLES)); ++id) {
+					auto* sampVeh = p->Get(id);
+					if (!sampVeh || !sampVeh->m_pGameVehicle)
+						continue;
+					CVehicle* gtaVeh = sampVeh->m_pGameVehicle;
+					if (gtaVeh->m_nModelIndex != modelId)
+						continue;
 
-			gtaVeh->m_pHandlingData = original;
-			gtaVeh->m_fMass = original->m_fMass;
-			gtaVeh->m_fTurnMass = original->m_fTurnMass;
+					if (m_vehicleHandlings.find(id) == m_vehicleHandlings.end() &&
+						m_playerAppliedHandlings.find(id) == m_playerAppliedHandlings.end() &&
+						m_customHandlings.find(gtaVeh) == m_customHandlings.end()) {
+						gtaVeh->m_pHandlingData = original;
+						gtaVeh->m_fMass = original->m_fMass;
+						gtaVeh->m_fTurnMass = original->m_fTurnMass;
+					}
+				}
+			}
 		}
-	}
+	}, pool);
 }
 
 void HandlingManager::ApplyPlayerHandling(uint16_t playerId, CVehicle* pVehicle)
@@ -550,7 +591,7 @@ void HandlingManager::RemovePlayerHandling(uint16_t playerId, CVehicle* pVehicle
 		return;
 
 	int modelId = pVehicle->m_nModelIndex;
-	auto* modelInfo = reinterpret_cast<CVehicleModelInfo*>(CModelInfo::GetModelInfo(modelId));
+	auto* modelInfo = reinterpret_cast<CVehicleModelInfo*>(GetEngineModelInfo(modelId));
 	if (modelInfo) {
 		unsigned int handlingId = modelInfo->m_nHandlingId;
 		tHandlingData* fallback = static_cast<tHandlingData*>(&gHandlingDataMgr.m_aVehicleHandling[handlingId]);
@@ -572,7 +613,7 @@ void HandlingManager::ProcessPlayerMods(uint16_t playerId, const std::vector<Han
 	auto it = m_playerHandlings.find(playerId);
 	if (it == m_playerHandlings.end()) {
 		auto newHandling = std::make_unique<tHandlingData>();
-		auto* modelInfo = reinterpret_cast<CVehicleModelInfo*>(CModelInfo::GetModelInfo(400));
+		auto* modelInfo = reinterpret_cast<CVehicleModelInfo*>(GetEngineModelInfo(400));
 		if (modelInfo) {
 			tHandlingData* base = static_cast<tHandlingData*>(&gHandlingDataMgr.m_aVehicleHandling[modelInfo->m_nHandlingId]);
 			std::memcpy(newHandling.get(), base, sizeof(tHandlingData));
@@ -609,7 +650,7 @@ void HandlingManager::ResetPlayerHandling(uint16_t playerId)
 			CVehicle* gtaVehicle = GetGameVehicleFromPool(vehicleId);
 			if (gtaVehicle) {
 				int modelId = gtaVehicle->m_nModelIndex;
-				auto* modelInfo = reinterpret_cast<CVehicleModelInfo*>(CModelInfo::GetModelInfo(modelId));
+				auto* modelInfo = reinterpret_cast<CVehicleModelInfo*>(GetEngineModelInfo(modelId));
 				if (modelInfo) {
 					auto modelIt = m_modelHandlings.find(modelId);
 					tHandlingData* fallback = (modelIt != m_modelHandlings.end()
@@ -687,7 +728,7 @@ void HandlingManager::ProcessModelMods(uint16_t modelId, const std::vector<Handl
 {
 	std::lock_guard<std::recursive_mutex> lock(m_handlingMutex);
 
-	auto* modelInfo = reinterpret_cast<CVehicleModelInfo*>(CModelInfo::GetModelInfo(modelId));
+	auto* modelInfo = reinterpret_cast<CVehicleModelInfo*>(GetEngineModelInfo(modelId));
 	if (!modelInfo)
 		return;
 	tHandlingData* original = static_cast<tHandlingData*>(&gHandlingDataMgr.m_aVehicleHandling[modelInfo->m_nHandlingId]);
@@ -732,7 +773,7 @@ void HandlingManager::OnVehicleDestructor(CVehicle* pVehicle)
 			if (GetVehicleSAMPId(it->first) == 0xFFFF) {
 				if (it->first && it->first->m_pHandlingData == it->second.get()) {
 					uint32_t modelIdx = it->first->m_nModelIndex;
-					auto* modelInfo = reinterpret_cast<CVehicleModelInfo*>(CModelInfo::GetModelInfo(modelIdx));
+					auto* modelInfo = reinterpret_cast<CVehicleModelInfo*>(GetEngineModelInfo(modelIdx));
 					if (modelInfo) {
 						it->first->m_pHandlingData = static_cast<tHandlingData*>(&gHandlingDataMgr.m_aVehicleHandling[modelInfo->m_nHandlingId]);
 					}
@@ -749,7 +790,7 @@ void HandlingManager::OnVehicleDestructor(CVehicle* pVehicle)
 		auto customIt = m_customHandlings.find(pVehicle);
 		if (customIt != m_customHandlings.end() && pVehicle->m_pHandlingData == customIt->second.get()) {
 			uint32_t modelIdx = pVehicle->m_nModelIndex;
-			auto* modelInfo = reinterpret_cast<CVehicleModelInfo*>(CModelInfo::GetModelInfo(modelIdx));
+			auto* modelInfo = reinterpret_cast<CVehicleModelInfo*>(GetEngineModelInfo(modelIdx));
 			if (modelInfo) {
 				pVehicle->m_pHandlingData = static_cast<tHandlingData*>(&gHandlingDataMgr.m_aVehicleHandling[modelInfo->m_nHandlingId]);
 			} else {
@@ -901,7 +942,7 @@ bool HandlingManager::ProcessAction(CHandlingAction action, RakNet::BitStream* b
 			data = it->second.get();
 		} else {
 			// Fallback: original handling for that model
-			auto* modelInfo = reinterpret_cast<CVehicleModelInfo*>(CModelInfo::GetModelInfo(modelId));
+			auto* modelInfo = reinterpret_cast<CVehicleModelInfo*>(GetEngineModelInfo(modelId));
 			if (modelInfo) {
 				data = static_cast<tHandlingData*>(&gHandlingDataMgr.m_aVehicleHandling[modelInfo->m_nHandlingId]);
 			}

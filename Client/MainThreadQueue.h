@@ -2,7 +2,7 @@
 //  RakHook's on_receive_rpc fires on RakNet's own network thread, not the
 //  game's main thread. CStreaming/CModelInfo/CHandlingDataMgr are absolutely
 //  not safe to touch from there - same reasoning already applied to the
-//  deferred queue in BrownTurbo-CHandling. Every RakHook callback in this
+//  deferred queue in BrownTurbo-ExtendedVeh. Every RakHook callback in this
 //  plugin does the minimum work needed to copy/parse its payload, then
 //  Push()es a closure here; StreamingHooks drains the queue once per frame
 //  from plugin::Events::gameProcessEvent, which runs on the main thread.

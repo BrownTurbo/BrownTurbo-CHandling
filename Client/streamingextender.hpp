@@ -11,7 +11,6 @@
 #include "game_sa/CVisibilityPlugins.h"
 #include "game_sa/NodeName.h"
 #include "game_sa/common.h"
-#include "safetyhook/safetyhook.hpp"
 #include "plugin.h"
 
 #include "CVisibilityPlugins.h"
@@ -23,75 +22,9 @@
 class StreamingExtender {
 private:
 	static inline std::unordered_map<uint32_t, CVehicleModelInfo*> s_customModels;
-	using GetModelInfoFn = CBaseModelInfo* (__cdecl*)(int);
-	using RequestModelFn = void (__cdecl*)(int, int);
-	using RemoveModelFn = void (__cdecl*)(int);
-	static inline safetyhook::InlineHook s_getModelInfoHook;
-	static inline safetyhook::InlineHook s_requestModelHook;
-	static inline safetyhook::InlineHook s_removeModelHook;
-	static inline bool s_hooksInstalled = false;
 	inline static void (*s_destructionRequeueCallback)(uint32_t) = nullptr;
-	static CBaseModelInfo* __cdecl Hooked_GetModelInfo(int index)
-	{
-		if (index >= CUSTOM_MODEL_BASE_ID) {
-			auto it = s_customModels.find(index);
-			return (it != s_customModels.end()) ? it->second : nullptr;
-		}
-		return s_getModelInfoHook.original<GetModelInfoFn>()(index);
-	}
-
-	static void __cdecl Hooked_RequestModel(int index, int flags)
-	{
-		if (index >= CUSTOM_MODEL_BASE_ID) {
-			return; // custom models are loaded manually via CreateCustomModel/FinalizeClump,
-					// never through the engine's own streaming request queue
-		}
-		s_requestModelHook.original<RequestModelFn>()(index, flags);
-	}
-
-	static void __cdecl Hooked_RemoveModel(int index)
-	{
-		if (index >= CUSTOM_MODEL_BASE_ID) {
-			return; // custom models are never unloaded through the engine's own streaming path
-		}
-		s_removeModelHook.original<RemoveModelFn>()(index);
-	}
 
 public:
-	static void InstallHooks()
-	{
-		if (s_hooksInstalled)
-			return;
-
-		s_getModelInfoHook = safetyhook::create_inline(
-			reinterpret_cast<void*>(0x403BA0), Hooked_GetModelInfo);
-		s_requestModelHook = safetyhook::create_inline(
-			reinterpret_cast<void*>(0x4087E0), Hooked_RequestModel);
-		s_removeModelHook = safetyhook::create_inline(
-			reinterpret_cast<void*>(0x4089A0), Hooked_RemoveModel);
-
-		if (!s_getModelInfoHook || !s_requestModelHook ||
-			!s_removeModelHook) {
-			s_removeModelHook.reset();
-			s_requestModelHook.reset();
-			s_getModelInfoHook.reset();
-			return;
-		}
-
-		s_hooksInstalled = true;
-	}
-
-	static void RestoreHooks()
-	{
-		if (!s_hooksInstalled)
-			return;
-
-		s_removeModelHook.reset();
-		s_requestModelHook.reset();
-		s_getModelInfoHook.reset();
-		s_hooksInstalled = false;
-	}
-
 	static CVehicleModelInfo* CreateCustomModel(const CustomVehicleDef& def)
 	{
 		auto it = s_customModels.find(def.customModelId);
@@ -106,10 +39,12 @@ public:
 		auto* vBaseInfo = reinterpret_cast<CVehicleModelInfo*>(visualBase);
 
 		CVehicleModelInfo* newModel = new CVehicleModelInfo();
+		if (!newModel)
+			return nullptr;
 		memcpy(newModel, vBaseInfo, sizeof(CVehicleModelInfo));
 		newModel->m_pRwClump = nullptr;
 		newModel->m_pRwObject = nullptr;
-		newModel->m_pColModel = vBaseInfo->m_pColModel;
+		newModel->SetOwnsColModel(0);
 
 		CBaseModelInfo* handlingBase = CModelInfo::GetModelInfo(def.handlingBaseModelId);
 		if (handlingBase) {
@@ -120,10 +55,10 @@ public:
 		return newModel;
 	}
 
-	static void FinalizeClump(CVehicleModelInfo* pInfo, RpClump* pClump)
+	static bool FinalizeClump(CVehicleModelInfo* pInfo, RpClump* pClump)
 	{
 		if (!pInfo || !pClump)
-			return;
+			return false;
 		if (pInfo->m_pRwClump) {
 			RpClumpDestroy(pInfo->m_pRwClump);
 			pInfo->m_pRwClump = nullptr;
@@ -131,6 +66,7 @@ public:
 		CVisibilityPlugins::SetupVehicleVariables(pClump);
 		pInfo->SetClump(pClump);
 		pInfo->SetAtomicRenderCallbacks();
+		return pInfo->m_pRwClump == pClump;
 	}
 
 	static void RegisterModel(uint32_t customId, CVehicleModelInfo* pInfo)
@@ -171,6 +107,9 @@ public:
 				RpClumpDestroy(pInfo->m_pRwClump);
 				pInfo->m_pRwClump = nullptr;
 			}
+			if (pInfo->m_pColModel) {
+				pInfo->m_pColModel = nullptr;
+			}
 			if (pInfo->m_nTxdIndex != -1) {
 				CTxdStore::RemoveTxdSlot(pInfo->m_nTxdIndex);
 				pInfo->m_nTxdIndex = -1;
@@ -185,10 +124,15 @@ public:
 	{
 		for (auto& [id, pInfo] : s_customModels) {
 			if (pInfo) {
-				if (pInfo->m_pRwClump)
+				if (pInfo->m_pRwClump) {
 					RpClumpDestroy(pInfo->m_pRwClump);
-				if (pInfo->m_nTxdIndex != -1)
+					pInfo->m_pRwClump = nullptr;
+				}
+				pInfo->m_pColModel = nullptr;
+				if (pInfo->m_nTxdIndex != -1) {
 					CTxdStore::RemoveTxdSlot(pInfo->m_nTxdIndex);
+					pInfo->m_nTxdIndex = -1;
+				}
 				delete pInfo;
 			}
 			AudioExtender::UnregisterVehicleAudio(id);
@@ -201,3 +145,14 @@ public:
 		s_destructionRequeueCallback = callback;
 	}
 };
+
+inline CBaseModelInfo* GetEngineModelInfo(int modelId)
+{
+	if (modelId >= static_cast<int>(CUSTOM_MODEL_BASE_ID)) {
+		return StreamingExtender::GetCustomModel(static_cast<uint32_t>(modelId));
+	}
+	if (modelId >= 0 && modelId < CModelInfo::ms_modelInfoCount) {
+		return CModelInfo::ms_modelInfoPtrs[modelId];
+	}
+	return nullptr;
+}

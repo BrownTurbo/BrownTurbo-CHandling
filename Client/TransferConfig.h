@@ -104,7 +104,7 @@ private:
 		std::ofstream file(path);
 		if (!file.is_open())
 			return;
-		file << "; BrownTurbo-CHandling model transfer cache settings\n"
+		file << "; model transfer cache settings\n"
 			 << "ExpireTimeMs=86400000\n"
 			 << "MaxCacheSizeMB=512\n"
 			 << "CacheEnabled=1\n"

@@ -11,6 +11,7 @@
 #include "game_sa/CColModel.h"
 #include "game_sa/CFileLoader.h"
 #include "game_sa/CModelInfo.h"
+#include "streamingextender.hpp"
 
 namespace {
 inline CColModel* GetCollisionModel(CBaseModelInfo* modelInfo)
@@ -72,16 +73,13 @@ bool CollisionLoader::Initialize()
 
 void CollisionLoader::Shutdown()
 {
-	/*
-	 * MUST execute while GTA is still alive.
-	 */
 	std::lock_guard lock(mutex_);
 
 	for (auto& [customId, entry] : loaded_) {
 		auto& handle = entry.handle;
 
 		if (handle.installed && handle.gtaModelId >= 0) {
-			auto* modelInfo = CModelInfo::GetModelInfo(
+			auto* modelInfo = GetEngineModelInfo(
 				handle.gtaModelId);
 
 			if (modelInfo && modelInfo->m_pColModel == handle.collision) {
@@ -728,7 +726,7 @@ CollisionLoader::Load(
 		return Result::TargetModelNotFound;
 	}
 
-	auto* target = CModelInfo::GetModelInfo(
+	auto* target = GetEngineModelInfo(
 		targetModelId);
 
 	if (!target) {
@@ -924,7 +922,7 @@ Result CollisionLoader::Attach(
 		return Result::TargetModelNotFound;
 	}
 
-	auto* modelInfo = CModelInfo::GetModelInfo(
+	auto* modelInfo = GetEngineModelInfo(
 		handle.gtaModelId);
 
 	if (!modelInfo) {
@@ -982,7 +980,7 @@ CollisionLoader::Detach(
 	if (!handle.installed)
 		return Result::NotLoaded;
 
-	auto* modelInfo = CModelInfo::GetModelInfo(
+	auto* modelInfo = GetEngineModelInfo(
 		handle.gtaModelId);
 
 	if (!modelInfo) {
@@ -1087,7 +1085,7 @@ CollisionLoader::Release(
 		 * We cannot safely call the public Detach() here because the
 		 * mutex is already held.
 		 */
-		auto* modelInfo = CModelInfo::GetModelInfo(
+		auto* modelInfo = GetEngineModelInfo(
 			handle.gtaModelId);
 
 		if (!modelInfo) {
@@ -1146,7 +1144,7 @@ CollisionLoader::Unload(
 	}
 
 	if (handle.installed) {
-		auto* modelInfo = CModelInfo::GetModelInfo(
+		auto* modelInfo = GetEngineModelInfo(
 			handle.gtaModelId);
 
 		if (!modelInfo) {

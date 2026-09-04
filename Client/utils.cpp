@@ -1,4 +1,7 @@
 #include "utils.h"
+#include <plugin_sa.h>
+
+#include <Psapi.h>
 
 bool SendMsg(int color, const char* msg)
 {
@@ -240,4 +243,118 @@ VehiclePoolVariant GetVehiclesPool()
 	}
 	}
 	return vehPool;
+}
+
+bool IsVehicleStreamedForLocalPlayer(CVehicle* gtaVeh)
+{
+	if (!gtaVeh)
+		return false;
+
+	auto* localPed = FindPlayerPed();
+	if (!localPed)
+		return false;
+
+	if (gtaVeh->m_nAreaCode != localPed->m_nAreaCode && gtaVeh->m_nAreaCode != 0 && localPed->m_nAreaCode != 0) {
+		return false;
+	}
+
+	CVector pPos = localPed->GetPosition();
+	CVector vPos = gtaVeh->GetPosition();
+	float dx = vPos.x - pPos.x;
+	float dy = vPos.y - pPos.y;
+	float dz = vPos.z - pPos.z;
+	float distSq = dx * dx + dy * dy + dz * dz;
+
+	constexpr float kMaxStreamRadiusSq = 300.0f * 300.0f; // 300 meters
+	if (distSq > kMaxStreamRadiusSq) {
+		return false;
+	}
+
+	return true;
+}
+
+bool IsExecutableAddress(uintptr_t address)
+{
+    MEMORY_BASIC_INFORMATION mbi{};
+
+    if (!VirtualQuery(
+            reinterpret_cast<void*>(
+                address),
+            &mbi,
+            sizeof(mbi)))
+    {
+        return false;
+    }
+
+    const auto protect =
+        mbi.Protect;
+
+    return
+        mbi.State == MEM_COMMIT &&
+        !(protect & PAGE_NOACCESS) &&
+        !(protect & PAGE_GUARD) &&
+        (
+            protect == PAGE_EXECUTE ||
+            protect == PAGE_EXECUTE_READ ||
+            protect == PAGE_EXECUTE_READWRITE ||
+            protect == PAGE_EXECUTE_WRITECOPY
+        );
+}
+
+bool IsInsideMainModule(uintptr_t address)
+{
+	HMODULE module = GetModuleHandleW(nullptr);
+
+	if (!module)
+		return false;
+
+	MODULEINFO info {};
+
+	if (!GetModuleInformation(
+			GetCurrentProcess(),
+			module,
+			&info,
+			sizeof(info))) {
+		return false;
+	}
+
+	const auto begin = reinterpret_cast<uintptr_t>(
+		info.lpBaseOfDll);
+
+	const auto end = begin + info.SizeOfImage;
+
+	return address >= begin && address < end;
+}
+
+void* GtaAddress(uintptr_t gtaAddress)
+{
+	const auto module = reinterpret_cast<
+		uintptr_t>(
+		GetModuleHandleW(nullptr));
+
+	/*
+	 * Plugin-SDK addresses are based on
+	 * GTA SA US 1.0 image base 0x00400000.
+	 */
+	constexpr uintptr_t GTA_IMAGE_BASE = 0x00400000;
+
+	return reinterpret_cast<void*>(module + (gtaAddress - GTA_IMAGE_BASE));
+}
+
+bool LooksLikeFunctionEntry(uintptr_t address)
+{
+	if (!address)
+		return false;
+	const uint8_t* code = reinterpret_cast<uint8_t*>(address);
+	/*
+	 * Obvious near jump.
+	 */
+	if (code[0] == 0xE9)
+		return false;
+	/*
+	 * Short jump.
+	 */
+	if (code[0] == 0xEB)
+		return false;
+	return true;
 }

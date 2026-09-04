@@ -179,7 +179,10 @@ private:
 			if (RwStreamFindChunk(dffStream, rwID_CLUMP, nullptr, nullptr)) {
 				RpClump* pClump = RpClumpStreamRead(dffStream);
 				if (pClump) {
-					StreamingExtender::FinalizeClump(newModel, pClump);
+					if (!StreamingExtender::FinalizeClump(newModel, pClump)) {
+						CTxdStore::RemoveTxdSlot(txdSlot);
+						SendMsg(0xFF0000, std::format("[CustomVeh] Failed to finalize clump for model {}", pending->def.customModelId).c_str());
+					}
 					if (pending->colReady && !pending->col.empty()) {
 						ExtendedVeh::Collision::CollisionLoader* colLoader = &ExtendedVeh::Collision::CollisionLoader::Instance();
 						if (!colLoader->LoadCollisionFromMemory(pending->col.data(), pending->col.size(), newModel)) {
@@ -212,9 +215,8 @@ public:
 		Events::initRwEvent.Add([this]() {
 			if (!m_runtimeInitialized) {
 				fs::create_directories("models");
-				StreamingExtender::InstallHooks();
 				m_pipeline = std::make_unique<AssetDownloader>(4);
-				AudioExtender::InstallHooks();
+				// AudioExtender::InstallHooks();
 				m_runtimeInitialized = true;
 			}
 		});
@@ -223,7 +225,7 @@ public:
 			if (m_pipeline) {
 				m_pipeline->Shutdown();
 			}
-			StreamingExtender::RestoreHooks();
+			// AudioExtender::RestoreHooks();
 			StreamingExtender::ClearAllCustomModels();
 		});
 
@@ -276,7 +278,7 @@ public:
 		while (!localQueue.empty()) {
 			auto pending = localQueue.front();
 			localQueue.pop();
-			AudioExtender::RegisterVehicleAudio(pending->def.customModelId, pending->def.audioBaseModelId, pending->def.engineSoundId);
+			AudioExtender::RegisterVehicleAudio(pending->def.customModelId, pending->def.audioBaseModelId, pending->def.engineSoundId.OnSound, pending->def.engineSoundId.OffSound, pending->def.celerateSoundId.accelerateSound, pending->def.celerateSoundId.decelerateSound);
 			CreateModelAndBeginDownloads(pending);
 		}
 	}
@@ -398,9 +400,13 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD dwReason, LPVOID lpReserved)
 			HandlingManager::ProcessPendingCommands();
 
 			// Update vehicle cache and model use counts
-			static std::vector<CVehicle*> previousVehicles;
-			std::vector<CVehicle*> currentVehicles;
-			currentVehicles.reserve(MAX_SAMP_VEHICLES);
+			struct VehicleEntry {
+				CVehicle* gameVeh;
+				uint16_t sampId;
+			};
+			static std::vector<VehicleEntry> previousVehicles;
+			std::vector<VehicleEntry> currentVehicles;
+			currentVehicles.reserve(128);
 
 			auto pool = GetVehiclesPool();
 			if (!std::holds_alternative<std::nullptr_t>(pool)) {
@@ -410,8 +416,8 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD dwReason, LPVOID lpReserved)
 						if (p) {
 							for (uint16_t id = 0; id < (std::min)(static_cast<uint16_t>(p->m_nCount), static_cast<uint16_t>(MAX_SAMP_VEHICLES)); ++id) {
 								auto* sampVeh = p->Get(id);
-								if (sampVeh && sampVeh->m_pGameVehicle) {
-									currentVehicles.push_back(sampVeh->m_pGameVehicle);
+								if (sampVeh && sampVeh->m_pGameVehicle && IsVehicleStreamedForLocalPlayer(sampVeh->m_pGameVehicle)) {
+									currentVehicles.push_back({ sampVeh->m_pGameVehicle, id });
 								}
 							}
 						}
@@ -421,39 +427,30 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD dwReason, LPVOID lpReserved)
 			}
 
 			// Detect new vehicles
-			for (CVehicle* veh : currentVehicles) {
+			for (const auto& cur : currentVehicles) {
 				bool found = false;
-				for (CVehicle* old : previousVehicles) {
-					if (old == veh) {
+				for (const auto& old : previousVehicles) {
+					if (old.gameVeh == cur.gameVeh) {
 						found = true;
 						break;
 					}
 				}
 				if (!found) {
-					uint16_t sampId = 0xFFFF;
-					// Find its SAMP ID (you can scan the pool again, but we already have it)
-					// Better: we can scan the pool once more, but we can also get the ID from the SAMP vehicle object.
-					// Since we have the SAMP vehicle pointer from the loop above, we can store both.
-					// For simplicity, we'll call GetVehicleSAMPId (which uses the cache).
-					// But it's not cached yet, so it will scan the pool.
-					sampId = HandlingManager::GetVehicleSAMPId(veh);
-					if (sampId != 0xFFFF) {
-						HandlingManager::CacheVehicleSAMPId(veh, sampId);
-					}
+					HandlingManager::CacheVehicleSAMPId(cur.gameVeh, cur.sampId);
 				}
 			}
 
 			// Detect vehicles that disappeared
-			for (CVehicle* old : previousVehicles) {
+			for (const auto& old : previousVehicles) {
 				bool stillExists = false;
-				for (CVehicle* cur : currentVehicles) {
-					if (cur == old) {
+				for (const auto& cur : currentVehicles) {
+					if (cur.gameVeh == old.gameVeh) {
 						stillExists = true;
 						break;
 					}
 				}
 				if (!stillExists) {
-					HandlingManager::RemoveVehicleFromCache(old);
+					HandlingManager::RemoveVehicleFromCache(old.gameVeh);
 				}
 			}
 
