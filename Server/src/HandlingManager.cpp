@@ -7,15 +7,11 @@
 #include "extendedveh.h"
 
 #include <cstring>
+#include <type_traits>
 #include <unordered_map>
 #include <unordered_set>
-
-#define CHECK_TYPE(attribute, type)                                                                                \
-	if (GetHandlingAttributeType(attrib) != type)                                                                  \
-	{                                                                                                              \
-		core_->logLn(LogLevel::Error, "[ExtendedVeh] Invalid type (%d) specified for attribute %d", type, attrib); \
-		return false;                                                                                              \
-	}
+#include <utility>
+#include "utils.h"
 
 namespace HandlingMgr
 {
@@ -24,9 +20,9 @@ std::unordered_map<uint32_t, stHandlingEntry> gCustomModelHandlings;
 
 std::unordered_map<uint16_t, struct stVehicleHandlingEntry> vehicleHandlings;
 std::unordered_map<uint16_t, struct stHandlingEntry> playerHandlings; // key = playerid
-std::unordered_map<uint32_t, CustomVehicleDef> customVehicleDefs; // key = modelId
+std::unordered_map<uint32_t, CustomVeh::Protocol::VehicleDefinition> customVehicleDefs; // key = modelId
 std::unordered_set<uint32_t> customVehicleModels;
-std::unordered_map<uint32_t, CustomVehicleDef> stagedCustomVehicleDefs;
+std::unordered_map<uint32_t, CustomVeh::Protocol::VehicleDefinition> stagedCustomVehicleDefs;
 
 std::unordered_set<uint16_t> usOutgoingVehicleMods;
 std::unordered_set<uint32_t> usOutgoingModelMods;
@@ -108,6 +104,113 @@ void __addMod(struct stHandlingEntry* handling, CHandlingAttrib attribute, const
 	case TYPE_NONE:
 		break;
 	}
+}
+
+template <typename T>
+bool IsHandlingType(CHandlingAttrib attrib, ICore* core)
+{
+	const CHandlingAttribType actualType = GetHandlingAttributeType(attrib);
+	const bool validType = [&] {
+		if constexpr (std::is_same_v<T, float>)
+			return actualType == TYPE_FLOAT;
+		if constexpr (std::is_same_v<T, unsigned int>)
+			return actualType == TYPE_UINT || actualType == TYPE_FLAG;
+		return actualType == TYPE_BYTE;
+	}();
+
+	if (!validType && core)
+	{
+		core->logLn(LogLevel::Error, "[ExtendedVeh] Invalid type specified for attribute %d", attrib);
+	}
+	return validType;
+}
+
+template <typename T>
+bool IsValidHandlingValue(CHandlingAttrib attrib, T value)
+{
+	if constexpr (std::is_same_v<T, float> || std::is_same_v<T, uint8_t>)
+		return ::IsValidHandlingValue(attrib, value);
+	return true;
+}
+
+template <typename T>
+stHandlingMod MakeHandlingMod(T value)
+{
+	stHandlingMod mod {};
+	if constexpr (std::is_same_v<T, float>)
+	{
+		mod.type = TYPE_FLOAT;
+		mod.fval = value;
+	}
+	else if constexpr (std::is_same_v<T, uint8_t>)
+	{
+		mod.type = TYPE_BYTE;
+		mod.bval = value;
+	}
+	else
+	{
+		mod.type = TYPE_UINT;
+		mod.uival = value;
+	}
+	return mod;
+}
+
+template <typename T>
+bool SetHandlingValue(stHandlingEntry& entry, CHandlingAttrib attrib, T value)
+{
+	__addMod(&entry, attrib, MakeHandlingMod(value));
+	return true;
+}
+
+template <typename T>
+bool GetHandlingValue(const tHandlingData& handlingData, CHandlingAttrib attrib, T& value)
+{
+	void* ptr = GetHandlingAttribPtr(const_cast<tHandlingData*>(&handlingData), attrib);
+	if (!ptr)
+		return false;
+
+	if constexpr (std::is_same_v<T, float>)
+		value = *static_cast<float*>(ptr);
+	else if constexpr (std::is_same_v<T, uint8_t>)
+		value = *static_cast<uint8_t*>(ptr);
+	else
+		value = *static_cast<unsigned int*>(ptr);
+	return true;
+}
+
+stHandlingEntry& GetPlayerHandlingEntry(uint16_t playerid)
+{
+	auto [it, inserted] = playerHandlings.try_emplace(playerid);
+	if (inserted)
+	{
+		it->second.handlingData = gBaseModelHandlings[0].handlingData;
+		it->second.handlingModMap.clear();
+	}
+	return it->second;
+}
+
+void SendPlayerHandling(uint16_t playerid, const stHandlingEntry& entry)
+{
+	ExtendedVehCompo* compo = ExtendedVehCompo::get();
+	if (!compo)
+		return;
+
+	CHandlingActionPacket packet(ACTION_SET_PLAYER_HANDLING);
+	packet.data.Write(playerid);
+	__WriteHandlingEntryToBitStream(&packet.data, entry);
+	IPlayer* player = compo->GetPlayerByID(playerid);
+	if (player)
+		player->sendPacket(Span<uint8_t>(packet.data.GetData(), packet.data.GetNumberOfBytesUsed()), 0, true);
+}
+
+const stHandlingEntry* GetVehicleHandlingEntry(uint16_t vehicleid)
+{
+	auto it = vehicleHandlings.find(vehicleid);
+	if (it == vehicleHandlings.end())
+		return nullptr;
+	if (it->second.usesModelHandling)
+		return it->second.modelHandling;
+	return &it->second;
 }
 
 bool __AddModelHandlingMod(uint16_t modelid, CHandlingAttrib attribute, const struct stHandlingMod mod)
@@ -338,103 +441,60 @@ void ResetVehicleHandling(IVehicle& vehicle, bool sendToPlayers)
 bool SetVehicleHandling(uint16_t vehicleid, CHandlingAttrib attrib, float value)
 {
 	ExtendedVehCompo* compo = ExtendedVehCompo::get();
-	ICore* core_ = compo->getCore();
 	if (!compo->IsValidVehicle(vehicleid) || !CanSetHandlingAttrib(attrib))
 		return false;
-	CHECK_TYPE(attrib, TYPE_FLOAT)
-
-	if (!IsValidHandlingValue(attrib, value))
+	if (!IsHandlingType<float>(attrib, compo->getCore()) || !IsValidHandlingValue(attrib, value))
 		return false;
-
-	struct stHandlingMod mod;
-	mod.fval = value;
-	mod.type = TYPE_FLOAT;
-
-	return __AddVehicleHandlingMod(vehicleid, attrib, mod);
+	return __AddVehicleHandlingMod(vehicleid, attrib, MakeHandlingMod(value));
 }
 
 bool SetVehicleHandling(uint16_t vehicleid, CHandlingAttrib attrib, unsigned int value)
 {
 	ExtendedVehCompo* compo = ExtendedVehCompo::get();
-	ICore* core_ = compo->getCore();
 	if (!compo->IsValidVehicle(vehicleid) || !CanSetHandlingAttrib(attrib))
 		return false;
-
-	CHandlingAttribType type = GetHandlingAttributeType(attrib);
-	if (!(type == TYPE_UINT || type == TYPE_FLAG))
+	if (!IsHandlingType<unsigned int>(attrib, compo->getCore()))
 		return false;
-
-	struct stHandlingMod mod;
-	mod.uival = value;
-	mod.type = TYPE_UINT;
-	return __AddVehicleHandlingMod(vehicleid, attrib, mod);
+	return __AddVehicleHandlingMod(vehicleid, attrib, MakeHandlingMod(value));
 }
 
 bool SetVehicleHandling(uint16_t vehicleid, CHandlingAttrib attrib, uint8_t value)
 {
 	ExtendedVehCompo* compo = ExtendedVehCompo::get();
-	ICore* core_ = compo->getCore();
 	if (!compo->IsValidVehicle(vehicleid) || !CanSetHandlingAttrib(attrib))
 		return false;
-	CHECK_TYPE(attrib, TYPE_BYTE)
-
-	if (!IsValidHandlingValue(attrib, value))
+	if (!IsHandlingType<uint8_t>(attrib, compo->getCore()) || !IsValidHandlingValue(attrib, value))
 		return false;
-
-	struct stHandlingMod mod;
-	mod.bval = value;
-	mod.type = TYPE_BYTE;
-	return __AddVehicleHandlingMod(vehicleid, attrib, mod);
+	return __AddVehicleHandlingMod(vehicleid, attrib, MakeHandlingMod(value));
 }
 
 bool SetModelHandling(uint16_t modelid, CHandlingAttrib attrib, float value)
 {
 	if (!CVehicleMgr::IS_VALID_VEHICLE_MODEL(modelid) || !CanSetHandlingAttrib(attrib))
 		return false;
-
 	ExtendedVehCompo* compo = ExtendedVehCompo::get();
-	ICore* core_ = compo->getCore();
-	CHECK_TYPE(attrib, TYPE_FLOAT)
-
-	if (!IsValidHandlingValue(attrib, value))
+	if (!IsHandlingType<float>(attrib, compo->getCore()) || !IsValidHandlingValue(attrib, value))
 		return false;
-
-	struct stHandlingMod mod;
-	mod.fval = value;
-	mod.type = TYPE_FLOAT;
-	return __AddModelHandlingMod(modelid, attrib, mod);
+	return __AddModelHandlingMod(modelid, attrib, MakeHandlingMod(value));
 }
 
 bool SetModelHandling(uint16_t modelid, CHandlingAttrib attrib, unsigned int value)
 {
 	if (!CVehicleMgr::IS_VALID_VEHICLE_MODEL(modelid) || !CanSetHandlingAttrib(attrib))
 		return false;
-	CHandlingAttribType type = GetHandlingAttributeType(attrib);
-	if (!(type == TYPE_UINT || type == TYPE_FLAG))
+	if (!IsHandlingType<unsigned int>(attrib, ExtendedVehCompo::get()->getCore()))
 		return false;
-
-	struct stHandlingMod mod;
-	mod.uival = value;
-	mod.type = TYPE_UINT;
-	return __AddModelHandlingMod(modelid, attrib, mod);
+	return __AddModelHandlingMod(modelid, attrib, MakeHandlingMod(value));
 }
 
 bool SetModelHandling(uint16_t modelid, CHandlingAttrib attrib, uint8_t value)
 {
 	if (!CVehicleMgr::IS_VALID_VEHICLE_MODEL(modelid) || !CanSetHandlingAttrib(attrib))
 		return false;
-
 	ExtendedVehCompo* compo = ExtendedVehCompo::get();
-	ICore* core_ = compo->getCore();
-	CHECK_TYPE(attrib, TYPE_BYTE)
-
-	if (!IsValidHandlingValue(attrib, value))
+	if (!IsHandlingType<uint8_t>(attrib, compo->getCore()) || !IsValidHandlingValue(attrib, value))
 		return false;
-
-	struct stHandlingMod mod;
-	mod.bval = value;
-	mod.type = TYPE_BYTE;
-	return __AddModelHandlingMod(modelid, attrib, mod);
+	return __AddModelHandlingMod(modelid, attrib, MakeHandlingMod(value));
 }
 
 /* GET */
@@ -442,26 +502,12 @@ bool SetModelHandling(uint16_t modelid, CHandlingAttrib attrib, uint8_t value)
 bool GetVehicleHandling(uint16_t vehicleid, CHandlingAttrib attrib, float& ret)
 {
 	ExtendedVehCompo* compo = ExtendedVehCompo::get();
-	ICore* core_ = compo->getCore();
 	if (!compo->IsValidVehicle(vehicleid))
 		return false;
-	CHECK_TYPE(attrib, TYPE_FLOAT)
-
-	auto it = vehicleHandlings.find(vehicleid);
-	if (it == vehicleHandlings.end())
+	if (!IsHandlingType<float>(attrib, compo->getCore()))
 		return false;
-
-	struct tHandlingData* hData = it->second.usesModelHandling
-		? (it->second.modelHandling ? &it->second.modelHandling->handlingData : nullptr)
-		: &it->second.handlingData;
-
-	if (!hData)
-		return false;
-	void* ptr = GetHandlingAttribPtr(hData, attrib);
-	if (!ptr)
-		return false;
-	ret = *(float*)ptr;
-	return true;
+	const stHandlingEntry* entry = GetVehicleHandlingEntry(vehicleid);
+	return entry && GetHandlingValue(entry->handlingData, attrib, ret);
 }
 
 bool GetVehicleHandling(uint16_t vehicleid, CHandlingAttrib attrib, unsigned int& ret)
@@ -469,163 +515,81 @@ bool GetVehicleHandling(uint16_t vehicleid, CHandlingAttrib attrib, unsigned int
 	ExtendedVehCompo* compo = ExtendedVehCompo::get();
 	if (!compo->IsValidVehicle(vehicleid))
 		return false;
-	CHandlingAttribType type = GetHandlingAttributeType(attrib);
-	if (!(type == TYPE_UINT || type == TYPE_FLAG))
+	if (!IsHandlingType<unsigned int>(attrib, compo->getCore()))
 		return false;
-
-	auto it = vehicleHandlings.find(vehicleid);
-	if (it == vehicleHandlings.end())
-		return false;
-
-	struct tHandlingData* hData = it->second.usesModelHandling
-		? (it->second.modelHandling ? &it->second.modelHandling->handlingData : nullptr)
-		: &it->second.handlingData;
-
-	if (!hData)
-		return false;
-	void* ptr = GetHandlingAttribPtr(hData, attrib);
-	if (!ptr)
-		return false;
-	ret = *(unsigned int*)ptr;
-	return true;
+	const stHandlingEntry* entry = GetVehicleHandlingEntry(vehicleid);
+	return entry && GetHandlingValue(entry->handlingData, attrib, ret);
 }
 
 bool GetVehicleHandling(uint16_t vehicleid, CHandlingAttrib attrib, uint8_t& ret)
 {
 	ExtendedVehCompo* compo = ExtendedVehCompo::get();
-	ICore* core_ = compo->getCore();
 	if (!compo->IsValidVehicle(vehicleid))
 		return false;
-	CHECK_TYPE(attrib, TYPE_BYTE)
-
-	auto it = vehicleHandlings.find(vehicleid);
-	if (it == vehicleHandlings.end())
+	if (!IsHandlingType<uint8_t>(attrib, compo->getCore()))
 		return false;
-
-	struct tHandlingData* hData = it->second.usesModelHandling
-		? (it->second.modelHandling ? &it->second.modelHandling->handlingData : nullptr)
-		: &it->second.handlingData;
-
-	if (!hData)
-		return false;
-	void* ptr = GetHandlingAttribPtr(hData, attrib);
-	if (!ptr)
-		return false;
-	ret = *(uint8_t*)ptr;
-	return true;
+	const stHandlingEntry* entry = GetVehicleHandlingEntry(vehicleid);
+	return entry && GetHandlingValue(entry->handlingData, attrib, ret);
 }
 
 bool GetModelHandling(uint16_t modelid, CHandlingAttrib attrib, float& ret)
 {
 	if (!CVehicleMgr::IS_VALID_VEHICLE_MODEL(modelid))
 		return false;
-	ExtendedVehCompo* compo = ExtendedVehCompo::get();
-	ICore* core_ = compo->getCore();
-	CHECK_TYPE(attrib, TYPE_FLOAT)
-
-	stHandlingEntry* mEntry = GetModelHandlingEntry(modelid);
-	if (!mEntry)
+	if (!IsHandlingType<float>(attrib, ExtendedVehCompo::get()->getCore()))
 		return false;
-
-	void* ptr = GetHandlingAttribPtr(&mEntry->handlingData, attrib);
-	if (!ptr)
-		return false;
-	ret = *(float*)ptr;
-	return true;
+	stHandlingEntry* entry = GetModelHandlingEntry(modelid);
+	return entry && GetHandlingValue(entry->handlingData, attrib, ret);
 }
 
 bool GetModelHandling(uint16_t modelid, CHandlingAttrib attrib, unsigned int& ret)
 {
 	if (!CVehicleMgr::IS_VALID_VEHICLE_MODEL(modelid))
 		return false;
-
-	CHandlingAttribType type = GetHandlingAttributeType(attrib);
-	if (!(type == TYPE_UINT || type == TYPE_FLAG))
+	if (!IsHandlingType<unsigned int>(attrib, ExtendedVehCompo::get()->getCore()))
 		return false;
-
-	stHandlingEntry* mEntry = GetModelHandlingEntry(modelid);
-	if (!mEntry)
-		return false;
-
-	void* ptr = GetHandlingAttribPtr(&mEntry->handlingData, attrib);
-	if (!ptr)
-		return false;
-	ret = *(unsigned int*)ptr;
-	return true;
+	stHandlingEntry* entry = GetModelHandlingEntry(modelid);
+	return entry && GetHandlingValue(entry->handlingData, attrib, ret);
 }
 
 bool GetModelHandling(uint16_t modelid, CHandlingAttrib attrib, uint8_t& ret)
 {
 	if (!CVehicleMgr::IS_VALID_VEHICLE_MODEL(modelid))
 		return false;
-	ExtendedVehCompo* compo = ExtendedVehCompo::get();
-	ICore* core_ = compo->getCore();
-	CHECK_TYPE(attrib, TYPE_BYTE)
-
-	stHandlingEntry* mEntry = GetModelHandlingEntry(modelid);
-	if (!mEntry)
+	if (!IsHandlingType<uint8_t>(attrib, ExtendedVehCompo::get()->getCore()))
 		return false;
-
-	void* ptr = GetHandlingAttribPtr(&mEntry->handlingData, attrib);
-	if (!ptr)
-		return false;
-	ret = *(uint8_t*)ptr;
-	return true;
+	stHandlingEntry* entry = GetModelHandlingEntry(modelid);
+	return entry && GetHandlingValue(entry->handlingData, attrib, ret);
 }
 
 bool GetDefaultHandling(uint16_t modelid, CHandlingAttrib attrib, float& ret)
 {
 	if (!CVehicleMgr::IS_VALID_VEHICLE_MODEL(modelid))
 		return false;
-	ExtendedVehCompo* compo = ExtendedVehCompo::get();
-	ICore* core_ = compo->getCore();
-	CHECK_TYPE(attrib, TYPE_FLOAT)
-
-	struct tHandlingData* pHandl = HandlingDefault::getDefaultModelHandling(modelid);
-	if (pHandl == nullptr)
+	if (!IsHandlingType<float>(attrib, ExtendedVehCompo::get()->getCore()))
 		return false;
-	void* ptr = GetHandlingAttribPtr(pHandl, attrib);
-	if (!ptr)
-		return false;
-	ret = *(float*)ptr;
-	return true;
+	struct tHandlingData* handling = HandlingDefault::getDefaultModelHandling(modelid);
+	return handling && GetHandlingValue(*handling, attrib, ret);
 }
 
 bool GetDefaultHandling(uint16_t modelid, CHandlingAttrib attrib, unsigned int& ret)
 {
 	if (!CVehicleMgr::IS_VALID_VEHICLE_MODEL(modelid))
 		return false;
-
-	CHandlingAttribType type = GetHandlingAttributeType(attrib);
-	if (!(type == TYPE_UINT || type == TYPE_FLAG))
+	if (!IsHandlingType<unsigned int>(attrib, ExtendedVehCompo::get()->getCore()))
 		return false;
-
-	struct tHandlingData* pHandl = HandlingDefault::getDefaultModelHandling(modelid);
-	if (pHandl == nullptr)
-		return false;
-	void* ptr = GetHandlingAttribPtr(pHandl, attrib);
-	if (!ptr)
-		return false;
-	ret = *(unsigned int*)ptr;
-	return true;
+	struct tHandlingData* handling = HandlingDefault::getDefaultModelHandling(modelid);
+	return handling && GetHandlingValue(*handling, attrib, ret);
 }
 
 bool GetDefaultHandling(uint16_t modelid, CHandlingAttrib attrib, uint8_t& ret)
 {
 	if (!CVehicleMgr::IS_VALID_VEHICLE_MODEL(modelid))
 		return false;
-	ExtendedVehCompo* compo = ExtendedVehCompo::get();
-	ICore* core_ = compo->getCore();
-	CHECK_TYPE(attrib, TYPE_BYTE)
-
-	struct tHandlingData* pHandl = HandlingDefault::getDefaultModelHandling(modelid);
-	if (pHandl == nullptr)
+	if (!IsHandlingType<uint8_t>(attrib, ExtendedVehCompo::get()->getCore()))
 		return false;
-	void* ptr = GetHandlingAttribPtr(pHandl, attrib);
-	if (!ptr)
-		return false;
-	ret = *(uint8_t*)ptr;
-	return true;
+	struct tHandlingData* handling = HandlingDefault::getDefaultModelHandling(modelid);
+	return handling && GetHandlingValue(*handling, attrib, ret);
 }
 
 bool SetPlayerHandling(uint16_t playerid, CHandlingAttrib attrib, float value)
@@ -633,34 +597,11 @@ bool SetPlayerHandling(uint16_t playerid, CHandlingAttrib attrib, float value)
 	if (!IS_VALID_PLAYERID(playerid) || !CanSetHandlingAttrib(attrib))
 		return false;
 	ExtendedVehCompo* compo = ExtendedVehCompo::get();
-	ICore* core_ = compo->getCore();
-	CHECK_TYPE(attrib, TYPE_FLOAT);
-
-	if (!IsValidHandlingValue(attrib, value))
+	if (!IsHandlingType<float>(attrib, compo->getCore()) || !IsValidHandlingValue(attrib, value))
 		return false;
-
-	if (playerHandlings.find(playerid) == playerHandlings.end())
-	{
-		playerHandlings[playerid].handlingData = gBaseModelHandlings[0].handlingData;
-		playerHandlings[playerid].handlingModMap.clear();
-	}
-
-	struct stHandlingMod mod;
-	mod.fval = value;
-	mod.type = TYPE_FLOAT;
-	__addMod(&playerHandlings[playerid], attrib, mod);
-
-	if (compo)
-	{
-		struct CHandlingActionPacket p(ACTION_SET_PLAYER_HANDLING);
-		p.data.Write(playerid);
-		__WriteHandlingEntryToBitStream(&p.data, playerHandlings[playerid]);
-		IPlayer* player = compo->GetPlayerByID(playerid);
-		if (player)
-		{
-			player->sendPacket(Span<uint8_t>(p.data.GetData(), p.data.GetNumberOfBytesUsed()), 0, true);
-		}
-	}
+	stHandlingEntry& entry = GetPlayerHandlingEntry(playerid);
+	SetHandlingValue(entry, attrib, value);
+	SendPlayerHandling(playerid, entry);
 	return true;
 }
 
@@ -668,33 +609,12 @@ bool SetPlayerHandling(uint16_t playerid, CHandlingAttrib attrib, unsigned int v
 {
 	if (!IS_VALID_PLAYERID(playerid) || !CanSetHandlingAttrib(attrib))
 		return false;
-	CHandlingAttribType type = GetHandlingAttributeType(attrib);
-	if (!(type == TYPE_UINT || type == TYPE_FLAG))
-		return false;
-
-	if (playerHandlings.find(playerid) == playerHandlings.end())
-	{
-		playerHandlings[playerid].handlingData = gBaseModelHandlings[0].handlingData;
-		playerHandlings[playerid].handlingModMap.clear();
-	}
-
-	struct stHandlingMod mod;
-	mod.uival = value;
-	mod.type = TYPE_UINT;
-	__addMod(&playerHandlings[playerid], attrib, mod);
-
 	ExtendedVehCompo* compo = ExtendedVehCompo::get();
-	if (compo)
-	{
-		struct CHandlingActionPacket p(ACTION_SET_PLAYER_HANDLING);
-		p.data.Write(playerid);
-		__WriteHandlingEntryToBitStream(&p.data, playerHandlings[playerid]);
-		IPlayer* player = compo->GetPlayerByID(playerid);
-		if (player)
-		{
-			player->sendPacket(Span<uint8_t>(p.data.GetData(), p.data.GetNumberOfBytesUsed()), 0, true);
-		}
-	}
+	if (!IsHandlingType<unsigned int>(attrib, compo->getCore()))
+		return false;
+	stHandlingEntry& entry = GetPlayerHandlingEntry(playerid);
+	SetHandlingValue(entry, attrib, value);
+	SendPlayerHandling(playerid, entry);
 	return true;
 }
 
@@ -703,33 +623,11 @@ bool SetPlayerHandling(uint16_t playerid, CHandlingAttrib attrib, uint8_t value)
 	if (!IS_VALID_PLAYERID(playerid) || !CanSetHandlingAttrib(attrib))
 		return false;
 	ExtendedVehCompo* compo = ExtendedVehCompo::get();
-	ICore* core_ = compo->getCore();
-	CHECK_TYPE(attrib, TYPE_BYTE);
-	if (!IsValidHandlingValue(attrib, value))
+	if (!IsHandlingType<uint8_t>(attrib, compo->getCore()) || !IsValidHandlingValue(attrib, value))
 		return false;
-
-	if (playerHandlings.find(playerid) == playerHandlings.end())
-	{
-		playerHandlings[playerid].handlingData = gBaseModelHandlings[0].handlingData;
-		playerHandlings[playerid].handlingModMap.clear();
-	}
-
-	struct stHandlingMod mod;
-	mod.bval = value;
-	mod.type = TYPE_BYTE;
-	__addMod(&playerHandlings[playerid], attrib, mod);
-
-	if (compo)
-	{
-		struct CHandlingActionPacket p(ACTION_SET_PLAYER_HANDLING);
-		p.data.Write(playerid);
-		__WriteHandlingEntryToBitStream(&p.data, playerHandlings[playerid]);
-		IPlayer* player = compo->GetPlayerByID(playerid);
-		if (player)
-		{
-			player->sendPacket(Span<uint8_t>(p.data.GetData(), p.data.GetNumberOfBytesUsed()), 0, true);
-		}
-	}
+	stHandlingEntry& entry = GetPlayerHandlingEntry(playerid);
+	SetHandlingValue(entry, attrib, value);
+	SendPlayerHandling(playerid, entry);
 	return true;
 }
 
@@ -760,13 +658,7 @@ bool GetPlayerHandling(uint16_t playerid, CHandlingAttrib attrib, float& ret)
 	if (it == playerHandlings.end())
 		return false;
 	ExtendedVehCompo* compo = ExtendedVehCompo::get();
-	ICore* core_ = compo->getCore();
-	CHECK_TYPE(attrib, TYPE_FLOAT);
-	void* ptr = GetHandlingAttribPtr(&it->second.handlingData, attrib);
-	if (!ptr)
-		return false;
-	ret = *(float*)ptr;
-	return true;
+	return IsHandlingType<float>(attrib, compo->getCore()) && GetHandlingValue(it->second.handlingData, attrib, ret);
 }
 
 bool GetPlayerHandling(uint16_t playerid, CHandlingAttrib attrib, unsigned int& ret)
@@ -774,14 +666,8 @@ bool GetPlayerHandling(uint16_t playerid, CHandlingAttrib attrib, unsigned int& 
 	auto it = playerHandlings.find(playerid);
 	if (it == playerHandlings.end())
 		return false;
-	CHandlingAttribType type = GetHandlingAttributeType(attrib);
-	if (!(type == TYPE_UINT || type == TYPE_FLAG))
-		return false;
-	void* ptr = GetHandlingAttribPtr(&it->second.handlingData, attrib);
-	if (!ptr)
-		return false;
-	ret = *(unsigned int*)ptr;
-	return true;
+	return IsHandlingType<unsigned int>(attrib, ExtendedVehCompo::get()->getCore()) &&
+		GetHandlingValue(it->second.handlingData, attrib, ret);
 }
 
 bool GetPlayerHandling(uint16_t playerid, CHandlingAttrib attrib, uint8_t& ret)
@@ -790,13 +676,7 @@ bool GetPlayerHandling(uint16_t playerid, CHandlingAttrib attrib, uint8_t& ret)
 	if (it == playerHandlings.end())
 		return false;
 	ExtendedVehCompo* compo = ExtendedVehCompo::get();
-	ICore* core_ = compo->getCore();
-	CHECK_TYPE(attrib, TYPE_BYTE);
-	void* ptr = GetHandlingAttribPtr(&it->second.handlingData, attrib);
-	if (!ptr)
-		return false;
-	ret = *(uint8_t*)ptr;
-	return true;
+	return IsHandlingType<uint8_t>(attrib, compo->getCore()) && GetHandlingValue(it->second.handlingData, attrib, ret);
 }
 
 bool ResetAll(uint16_t playerid)
@@ -837,35 +717,6 @@ bool ResetAll(uint16_t playerid)
 	return true;
 }
 
-void RegisterCustomVehicle(uint32_t customModelId, uint32_t visualBase, uint32_t audioBase, uint32_t handlingBase,
-	int16_t engineSoundId,
-	const char* dffUrl, const char* dffHash,
-	const char* txdUrl, const char* txdHash)
-{
-	CustomVehicleDef def;
-	def.customModelId = customModelId;
-	def.visualBaseModelId = visualBase;
-	def.audioBaseModelId = audioBase;
-	def.handlingBaseModelId = handlingBase;
-	def.engineSoundId = engineSoundId;
-	std::strncpy(def.dffUrl, dffUrl ? dffUrl : "", sizeof(def.dffUrl) - 1);
-	def.dffUrl[sizeof(def.dffUrl) - 1] = '\0';
-	std::strncpy(def.dffHash, dffHash ? dffHash : "", sizeof(def.dffHash) - 1);
-	def.dffHash[sizeof(def.dffHash) - 1] = '\0';
-	std::strncpy(def.txdUrl, txdUrl ? txdUrl : "", sizeof(def.txdUrl) - 1);
-	def.txdUrl[sizeof(def.txdUrl) - 1] = '\0';
-	std::strncpy(def.txdHash, txdHash ? txdHash : "", sizeof(def.txdHash) - 1);
-	def.txdHash[sizeof(def.txdHash) - 1] = '\0';
-
-	customVehicleDefs[customModelId] = def;
-	customVehicleModels.insert(customModelId);
-	CVehicleMgr::VehicleRegistry::Get().RegisterCustomModel(customModelId);
-
-	stHandlingEntry& entry = gCustomModelHandlings[customModelId];
-	HandlingDefault::copyDefaultModelHandling(handlingBase, &entry.handlingData);
-	entry.handlingModMap.clear();
-}
-
 void UnregisterCustomVehicle(uint32_t customModelId)
 {
 	customVehicleDefs.erase(customModelId);
@@ -875,54 +726,50 @@ void UnregisterCustomVehicle(uint32_t customModelId)
 	SendCustomVehicleDestroyToAll(customModelId);
 }
 
-void BeginCustomVehicleDef(uint32_t customModelId, uint32_t visualBase, uint32_t audioBase, uint32_t handlingBase, int16_t engineSoundId)
+void BeginCustomVehicleDef(uint32_t customModelId, uint32_t visualBase, uint32_t audioBase, uint32_t handlingBase, CustomVeh::Protocol::EngineSound engineSoundId)
 {
-	CustomVehicleDef def {};
+	CustomVeh::Protocol::VehicleDefinition def {};
 	def.customModelId = customModelId;
-	def.visualBaseModelId = visualBase;
-	def.audioBaseModelId = audioBase;
-	def.handlingBaseModelId = handlingBase;
-	def.engineSoundId = engineSoundId;
+	def.visualBaseModel = visualBase;
+	def.audioBaseModel = audioBase;
+	def.handlingBaseModel = handlingBase;
+	def.engineSoundId.OnSound = engineSoundId.OnSound;
+	def.engineSoundId.OffSound = engineSoundId.OffSound;
 	stagedCustomVehicleDefs[customModelId] = def;
+
+	customVehicleModels.insert(customModelId);
+	CVehicleMgr::VehicleRegistry::Get().RegisterCustomModel(customModelId);
+
+	stHandlingEntry& entry = gCustomModelHandlings[customModelId];
+	HandlingDefault::copyDefaultModelHandling(handlingBase, &entry.handlingData);
+	entry.handlingModMap.clear();
 }
 
-bool SetCustomVehicleDff(uint32_t customModelId, const char* dffUrl, const char* dffHash)
+bool SetCustomVehicleAsset(uint32_t customModelId, std::string filename, CustomVeh::Protocol::AssetDescriptor CustomVeh::Protocol::VehicleDefinition::* asset)
 {
 	auto it = stagedCustomVehicleDefs.find(customModelId);
 	if (it == stagedCustomVehicleDefs.end())
 		return false;
 
-	std::strncpy(it->second.dffUrl, dffUrl ? dffUrl : "", sizeof(it->second.dffUrl) - 1);
-	it->second.dffUrl[sizeof(it->second.dffUrl) - 1] = '\0';
-	std::strncpy(it->second.dffHash, dffHash ? dffHash : "", sizeof(it->second.dffHash) - 1);
-	it->second.dffHash[sizeof(it->second.dffHash) - 1] = '\0';
+	CustomVeh::Protocol::AssetDescriptor& descriptor = it->second.*asset;
+	descriptor.filename = std::move(filename);
+	ComputeFileSha256(descriptor.filename, descriptor.sha256);
 	return true;
 }
 
-bool SetCustomVehicleTxd(uint32_t customModelId, const char* txdUrl, const char* txdHash)
+bool SetCustomVehicleDff(uint32_t customModelId, std::string dffFile)
 {
-	auto it = stagedCustomVehicleDefs.find(customModelId);
-	if (it == stagedCustomVehicleDefs.end())
-		return false;
-
-	std::strncpy(it->second.txdUrl, txdUrl ? txdUrl : "", sizeof(it->second.txdUrl) - 1);
-	it->second.txdUrl[sizeof(it->second.txdUrl) - 1] = '\0';
-	std::strncpy(it->second.txdHash, txdHash ? txdHash : "", sizeof(it->second.txdHash) - 1);
-	it->second.txdHash[sizeof(it->second.txdHash) - 1] = '\0';
-	return true;
+	return SetCustomVehicleAsset(customModelId, std::move(dffFile), &CustomVeh::Protocol::VehicleDefinition::dff);
 }
 
-bool SetCustomVehicleCol(uint32_t customModelId, const char* colUrl, const char* colHash)
+bool SetCustomVehicleTxd(uint32_t customModelId, std::string txdFile)
 {
-	auto it = stagedCustomVehicleDefs.find(customModelId);
-	if (it == stagedCustomVehicleDefs.end())
-		return false;
+	return SetCustomVehicleAsset(customModelId, std::move(txdFile), &CustomVeh::Protocol::VehicleDefinition::txd);
+}
 
-	std::strncpy(it->second.colUrl, colUrl ? colUrl : "", sizeof(it->second.colUrl) - 1);
-	it->second.colUrl[sizeof(it->second.colUrl) - 1] = '\0';
-	std::strncpy(it->second.colHash, colHash ? colHash : "", sizeof(it->second.colHash) - 1);
-	it->second.colHash[sizeof(it->second.colHash) - 1] = '\0';
-	return true;
+bool SetCustomVehicleCol(uint32_t customModelId, std::string colFile)
+{
+	return SetCustomVehicleAsset(customModelId, std::move(colFile), &CustomVeh::Protocol::VehicleDefinition::col);
 }
 
 bool CommitCustomVehicleDef(uint32_t customModelId)
@@ -952,16 +799,16 @@ void SendCustomVehicleDefToPlayer(IPlayer& player, uint32_t modelId)
 	NetworkBitStream bs;
 	const auto& def = it->second;
 	bs.Write(def.customModelId);
-	bs.Write(def.visualBaseModelId);
-	bs.Write(def.audioBaseModelId);
-	bs.Write(def.handlingBaseModelId);
+	bs.Write(def.visualBaseModel);
+	bs.Write(def.audioBaseModel);
+	bs.Write(def.handlingBaseModel);
 	bs.Write(def.engineSoundId);
-	bs.Write(def.dffUrl, 128);
-	bs.Write(def.dffHash, 65);
-	bs.Write(def.txdUrl, 128);
-	bs.Write(def.txdHash, 65);
-	bs.Write(def.colUrl, 128);
-	bs.Write(def.colHash, 65);
+	bs.Write(def.dff.filename.c_str(), 128);
+	bs.Write(def.dff.sha256.c_str(), 65);
+	bs.Write(def.txd.filename.c_str(), 128);
+	bs.Write(def.txd.sha256.c_str(), 65);
+	bs.Write(def.col.filename.c_str(), 128);
+	bs.Write(def.col.sha256.c_str(), 65);
 	player.sendRPC(CHandlingRPCID::CUSTOM_VEHICLE_DEF, Span<uint8_t>(bs.GetData(), bs.GetNumberOfBytesUsed()), 0, false);
 }
 

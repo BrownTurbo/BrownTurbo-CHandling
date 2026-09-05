@@ -200,14 +200,14 @@ native bool:ResetAllHandlingForPlayer(playerid);
 native bool:ResetAllHandling(playerid);
 
 // Custom Vehicle Models & Streaming Natives
-native bool:BeginCustomVehicleDef(customModelId, visualBase, audioBase, handlingBase, engineSoundId);
-native bool:SetCustomVehicleDff(customModelId, const dffUrl[], const dffHash[]);
-native bool:SetCustomVehicleTxd(customModelId, const txdUrl[], const txdHash[]);
+native bool:BeginCustomVehicleDef(customModelId, visualBase, audioBase, handlingBase, engineOnSoundId, engineOffSoundId);
+native bool:SetCustomVehicleDff(customModelId, const dffUrl[]);
+native bool:SetCustomVehicleTxd(customModelId, const txdUrl[]);
 native bool:CommitCustomVehicleDef(customModelId);
 native bool:DestroyCustomVehicle(customModelId);
 native bool:IsCustomVehicleModel(modelid);
 native bool:IsVehicleCustom(vehicleid);
-native SetCustomVehicleCol(modelid, const colUrl[], const colHash[]);
+native SetCustomVehicleCol(modelid, const colUrl[]);
 native BindVehicleModel(vehicleid, modelid);
 native GetFileSha256(const filename[], outputHash[]);
 native InvalidateModelCache(modelid, fileKind);
@@ -216,15 +216,15 @@ native GetClientFileStoreStatus(playerid, modelId, fileKind);
 /*
  * Stock Wrapper Helper for Single-Call Custom Vehicle Creation
  */
-stock bool:DefineCustomVehicle(customModelId, visualBase, audioBase, handlingBase, engineSoundId, const dffUrl[], const dffHash[], const txdUrl[], const txdHash[], const colUrl[], const colHash[])
+stock bool:DefineCustomVehicle(customModelId, visualBase, audioBase, handlingBase, engineOnSoundId, engineOffSoundId, engineOffSoundId, const dffUrl[], const txdUrl[], const colUrl[])
 {
-    if (!BeginCustomVehicleDef(customModelId, visualBase, audioBase, handlingBase, engineSoundId))
+    if (!BeginCustomVehicleDef(customModelId, visualBase, audioBase, handlingBase, engineOnSoundId, engineOffSoundId))
         return false;
-    if (!SetCustomVehicleDff(customModelId, dffUrl, dffHash))
+    if (!SetCustomVehicleDff(customModelId, dffUrl))
         return false;
-    if (!SetCustomVehicleTxd(customModelId, txdUrl, txdHash))
+    if (!SetCustomVehicleTxd(customModelId, txdUrl))
         return false;
-    if (!SetCustomVehicleCol(customModelId, colUrl, colHash))
+    if (!SetCustomVehicleCol(customModelId, colUrl))
         return false;
     return CommitCustomVehicleDef(customModelId);
 }

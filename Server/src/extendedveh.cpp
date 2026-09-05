@@ -91,9 +91,7 @@ void ExtendedVehCompo::onInit(IComponentList* components)
 	pawn_component_ = components->queryComponent<IPawnComponent>();
 	if (!pawn_component_)
 	{
-		core_->logLn(LogLevel::Error,
-			"Error loading component %.*s: Pawn component not loaded",
-			name.length(), name.data());
+		core_->logLn(LogLevel::Error, "Error loading component %s: Pawn component not loaded", name.data());
 		return;
 	}
 
@@ -107,9 +105,7 @@ void ExtendedVehCompo::onInit(IComponentList* components)
 	vehicles_ = components->queryComponent<IVehiclesComponent>();
 	if (!vehicles_)
 	{
-		core_->logLn(LogLevel::Error,
-			"Error loading component %.*s: Vehicles component not loaded",
-			name.data());
+		core_->logLn(LogLevel::Error, "Error loading component %.*s: Vehicles component not loaded", name.data());
 		return;
 	}
 	if (vehicles_)

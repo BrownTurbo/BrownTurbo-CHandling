@@ -18,12 +18,6 @@
 #define EXTVEH_VERSION_MINOR 0
 #define EXTVEH_VERSION_PATCH 1
 
-/*
- * The compatibility version number decides if the client supports our CHandling version or not
- * Clients with smaller compat version won't be able to use CHandling
- *
- * Increase this number only if doing things that break the compatibility with older client
- */
 #define EXTVEH_COMPAT_VERSION 0x1001D
 
 #define IS_VALID_PLAYERID(playerid) \

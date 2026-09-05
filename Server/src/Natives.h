@@ -13,6 +13,7 @@
 #include "CustomVehicleBindingRegistry.h"
 #include "CVehicleManager.hpp"
 #include "ModelTransferManager.h"
+#include "utils.h"
 #include <Server/Components/Pawn/pawn.hpp>
 #include <Server/Components/Pawn/Impl/pawn_natives.hpp>
 
@@ -155,7 +156,7 @@ SCRIPT_API(SetVehicleHandlingFloat, bool(int vehicleid, CHandlingAttrib attrib, 
 {
 	if (!CVehicleMgr::VehicleRegistry::Get().IsValidVehicleID(vehicleid))
 		return false;
-	return HandlingMgr::SetVehicleHandling(static_cast<std::uint16_t>(vehicleid), attrib, value);
+	return HandlingMgr::SetVehicleHandling(static_cast<uint16_t>(vehicleid), attrib, value);
 }
 
 // native SetVehicleHandlingInt(vehicleid, attrib, value);
@@ -165,9 +166,9 @@ SCRIPT_API(SetVehicleHandlingInt, bool(int vehicleid, CHandlingAttrib attrib, in
 		return false;
 
 	if (GetHandlingAttributeType(attrib) == TYPE_BYTE)
-		return HandlingMgr::SetVehicleHandling(static_cast<std::uint16_t>(vehicleid), attrib, (uint8_t)value);
+		return HandlingMgr::SetVehicleHandling(static_cast<uint16_t>(vehicleid), attrib, (uint8_t)value);
 
-	return HandlingMgr::SetVehicleHandling(static_cast<std::uint16_t>(vehicleid), attrib, (unsigned int)value);
+	return HandlingMgr::SetVehicleHandling(static_cast<uint16_t>(vehicleid), attrib, (unsigned int)value);
 }
 
 // native SetPlayerHandlingFloat(playerid, attrib, Flost:value);
@@ -196,7 +197,7 @@ SCRIPT_API(GetVehicleHandlingFloat, bool(int vehicleid, CHandlingAttrib attrib, 
 	value = 0.0f;
 	if (!CVehicleMgr::VehicleRegistry::Get().IsValidVehicleID(vehicleid))
 		return false;
-	return HandlingMgr::GetVehicleHandling(static_cast<std::uint16_t>(vehicleid), attrib, value);
+	return HandlingMgr::GetVehicleHandling(static_cast<uint16_t>(vehicleid), attrib, value);
 }
 
 // native GetVehicleHandlingInt(vehicleid, attrib, &value);
@@ -210,12 +211,12 @@ SCRIPT_API(GetVehicleHandlingInt, bool(int vehicleid, CHandlingAttrib attrib, un
 	if (GetHandlingAttributeType(attrib) == TYPE_BYTE)
 	{
 		uint8_t byteVal = 0;
-		ret = HandlingMgr::GetVehicleHandling(static_cast<std::uint16_t>(vehicleid), attrib, byteVal);
+		ret = HandlingMgr::GetVehicleHandling(static_cast<uint16_t>(vehicleid), attrib, byteVal);
 		value = byteVal;
 	}
 	else
 	{
-		ret = HandlingMgr::GetVehicleHandling(static_cast<std::uint16_t>(vehicleid), attrib, value);
+		ret = HandlingMgr::GetVehicleHandling(static_cast<uint16_t>(vehicleid), attrib, value);
 	}
 	return ret;
 }
@@ -296,7 +297,7 @@ SCRIPT_API(SetPlayerHandlingFloat, bool(IPlayer& player, CHandlingAttrib attrib,
 		IPlayer* player_ = *it;
 		if (player_->getID() == playerid)
 		{
-			return HandlingMgr::SetPlayerHandling(static_cast<std::uint16_t>(playerid), attrib, value);
+			return HandlingMgr::SetPlayerHandling(static_cast<uint16_t>(playerid), attrib, value);
 		}
 	}
 	return false;
@@ -318,7 +319,7 @@ SCRIPT_API(ResetAllHandlingForPlayer, bool(IPlayer& player))
 		IPlayer* player_ = *it;
 		if (player_->getID() == playerid)
 		{
-			return HandlingMgr::ResetAll(static_cast<std::uint16_t>(playerid));
+			return HandlingMgr::ResetAll(static_cast<uint16_t>(playerid));
 		}
 	}
 	return false;
@@ -341,8 +342,8 @@ SCRIPT_API(SetPlayerHandlingInt, bool(IPlayer& player, CHandlingAttrib attrib, i
 		if (player_->getID() == playerid)
 		{
 			if (GetHandlingAttributeType(attrib) == TYPE_BYTE)
-				return HandlingMgr::SetPlayerHandling(static_cast<std::uint16_t>(playerid), attrib, (uint8_t)value);
-			return HandlingMgr::SetPlayerHandling(static_cast<std::uint16_t>(playerid), attrib, (unsigned int)value);
+				return HandlingMgr::SetPlayerHandling(static_cast<uint16_t>(playerid), attrib, (uint8_t)value);
+			return HandlingMgr::SetPlayerHandling(static_cast<uint16_t>(playerid), attrib, (unsigned int)value);
 		}
 	}
 	return false;
@@ -365,7 +366,7 @@ SCRIPT_API(GetPlayerHandlingFloat, bool(IPlayer& player, CHandlingAttrib attrib,
 		IPlayer* player_ = *it;
 		if (player_->getID() == playerid)
 		{
-			return HandlingMgr::GetPlayerHandling(static_cast<std::uint16_t>(playerid), attrib, value);
+			return HandlingMgr::GetPlayerHandling(static_cast<uint16_t>(playerid), attrib, value);
 		}
 	}
 	return false;
@@ -393,12 +394,12 @@ SCRIPT_API(GetPlayerHandlingInt, bool(IPlayer& player, CHandlingAttrib attrib, u
 			if (GetHandlingAttributeType(attrib) == TYPE_BYTE)
 			{
 				uint8_t byteVal = 0;
-				ret = HandlingMgr::GetPlayerHandling(static_cast<std::uint16_t>(playerid), attrib, byteVal);
+				ret = HandlingMgr::GetPlayerHandling(static_cast<uint16_t>(playerid), attrib, byteVal);
 				value = byteVal;
 			}
 			else
 			{
-				ret = HandlingMgr::GetPlayerHandling(static_cast<std::uint16_t>(playerid), attrib, value);
+				ret = HandlingMgr::GetPlayerHandling(static_cast<uint16_t>(playerid), attrib, value);
 			}
 			return ret;
 		}
@@ -422,64 +423,67 @@ SCRIPT_API(ResetPlayerHandling, bool(IPlayer& player))
 		IPlayer* player_ = *it;
 		if (player_->getID() == playerid)
 		{
-			return HandlingMgr::ResetPlayerHandling(static_cast<std::uint16_t>(playerid));
+			return HandlingMgr::ResetPlayerHandling(static_cast<uint16_t>(playerid));
 		}
 	}
 	return false;
 }
 
-// native BeginCustomVehicleDef(customModelId, visualBase, audioBase, handlingBase, engineSoundId);
-SCRIPT_API(BeginCustomVehicleDef, bool(int customModelId, int visualBase, int audioBase, int handlingBase, int engineSoundId))
+// native BeginCustomVehicleDef(customModelId, visualBase, audioBase, handlingBase, engineOnSoundId, engineOffSoundId);
+SCRIPT_API(BeginCustomVehicleDef, bool(int customModelId, int visualBase, int audioBase, int handlingBase, int engineOnSoundId, int engineOffSoundId))
 {
 	if (customModelId < 0)
 		return false;
-	HandlingMgr::BeginCustomVehicleDef(static_cast<std::uint32_t>(customModelId), static_cast<std::uint32_t>(visualBase), static_cast<std::uint32_t>(audioBase), static_cast<std::uint32_t>(handlingBase), static_cast<std::int16_t>(engineSoundId));
+	CustomVeh::Protocol::EngineSound engineSoundId;
+	engineSoundId.OnSound = static_cast<int16_t>(engineOnSoundId);
+	engineSoundId.OffSound = static_cast<int16_t>(engineOffSoundId);
+	HandlingMgr::BeginCustomVehicleDef(static_cast<uint32_t>(customModelId), static_cast<uint32_t>(visualBase), static_cast<uint32_t>(audioBase), static_cast<uint32_t>(handlingBase), engineSoundId);
 	return true;
 }
 
-// native SetCustomVehicleDff(customModelId, const dffUrl[], const dffHash[]);
-SCRIPT_API(SetCustomVehicleDff, bool(int customModelId, const std::string& dffUrl, const std::string& dffHash))
+// native SetCustomVehicleDff(customModelId, const dffUrl[]);
+SCRIPT_API(SetCustomVehicleDff, bool(int customModelId, const std::string& dffUrl))
 {
-	if (dffUrl.empty() || dffHash.empty())
+	if (dffUrl.empty())
 	{
 		return false;
 	}
-	return HandlingMgr::SetCustomVehicleDff(static_cast<std::uint32_t>(customModelId), dffUrl.c_str(), dffHash.c_str());
+	return HandlingMgr::SetCustomVehicleDff(static_cast<uint32_t>(customModelId), dffUrl);
 }
 
-// native SetCustomVehicleTxd(customModelId, const txdUrl[], const txdHash[]);
-SCRIPT_API(SetCustomVehicleTxd, bool(int customModelId, const std::string& txdUrl, const std::string& txdHash))
+// native SetCustomVehicleTxd(customModelId, const txdUrl[]);
+SCRIPT_API(SetCustomVehicleTxd, bool(int customModelId, const std::string& txdUrl))
 {
-	if (txdUrl.empty() || txdHash.empty())
+	if (txdUrl.empty())
 	{
 		return false;
 	}
-	return HandlingMgr::SetCustomVehicleTxd(static_cast<std::uint32_t>(customModelId), txdUrl.c_str(), txdHash.c_str());
+	return HandlingMgr::SetCustomVehicleTxd(static_cast<uint32_t>(customModelId), txdUrl);
 }
 
-// native SetCustomVehicleCol(customModelId, const colUrl[], const colHash[]);
-SCRIPT_API(SetCustomVehicleCol, bool(int customModelId, const std::string& colUrl, const std::string& colHash))
+// native SetCustomVehicleCol(customModelId, const colUrl[]);
+SCRIPT_API(SetCustomVehicleCol, bool(int customModelId, const std::string& colUrl))
 {
-	if (colUrl.empty() || colHash.empty())
+	if (colUrl.empty())
 	{
 		return false;
 	}
-	return HandlingMgr::SetCustomVehicleCol(static_cast<std::uint32_t>(customModelId), colUrl.c_str(), colHash.c_str());
+	return HandlingMgr::SetCustomVehicleCol(static_cast<uint32_t>(customModelId), colUrl);
 }
 
 // native CommitCustomVehicleDef(customModelId);
 SCRIPT_API(CommitCustomVehicleDef, bool(int customModelId))
 {
-	return HandlingMgr::CommitCustomVehicleDef(static_cast<std::uint32_t>(customModelId));
+	return HandlingMgr::CommitCustomVehicleDef(static_cast<uint32_t>(customModelId));
 }
 
 // native DestroyCustomVehicle(customModelId);
 SCRIPT_API(DestroyCustomVehicle, bool(int customModelId))
 {
-	if (!HandlingMgr::IsCustomVehicle(static_cast<std::uint32_t>(customModelId)))
+	if (!HandlingMgr::IsCustomVehicle(static_cast<uint32_t>(customModelId)))
 		return false;
-	HandlingMgr::SendCustomVehicleDestroyToAll(static_cast<std::uint32_t>(customModelId));
-	HandlingMgr::UnregisterCustomVehicle(static_cast<std::uint32_t>(customModelId));
+	HandlingMgr::SendCustomVehicleDestroyToAll(static_cast<uint32_t>(customModelId));
+	HandlingMgr::UnregisterCustomVehicle(static_cast<uint32_t>(customModelId));
 	return true;
 }
 
@@ -499,7 +503,7 @@ SCRIPT_API(ResetAllHandling, bool(IPlayer& player))
 		IPlayer* player_ = *it;
 		if (player_->getID() == playerid)
 		{
-			return HandlingMgr::ResetAll(static_cast<std::uint16_t>(playerid));
+			return HandlingMgr::ResetAll(static_cast<uint16_t>(playerid));
 		}
 	}
 	return false;
@@ -510,7 +514,7 @@ SCRIPT_API(IsCustomVehicleModel, bool(int modelid))
 {
 	if (!CVehicleMgr::VehicleRegistry::Get().IsValidVehicleModel(modelid))
 		return false;
-	return HandlingMgr::IsCustomVehicle(static_cast<std::uint32_t>(modelid));
+	return HandlingMgr::IsCustomVehicle(static_cast<uint32_t>(modelid));
 }
 
 // native IsVehicleCustom(vehicleid);
@@ -524,7 +528,7 @@ SCRIPT_API(IsVehicleCustom, bool(int vehicleid))
 	IVehicle* vehicle = compo->GetVehicleByID(vehicleid);
 	if (!vehicle)
 		return false;
-	return HandlingMgr::IsCustomVehicle(static_cast<std::uint32_t>(vehicle->getModel()));
+	return HandlingMgr::IsCustomVehicle(static_cast<uint32_t>(vehicle->getModel()));
 }
 
 // native BindVehicleModel(vehicleid, customModelId);
@@ -547,9 +551,8 @@ SCRIPT_API(BindVehicleModel, bool(int vehicleid, int customModelId))
 // native GetFileSha256(const filename[], outputHash[]);
 SCRIPT_API(GetFileSha256, bool(const std::string& filename, std::string& outHash))
 {
-	// filename is relative to server models dir (or an absolute path — we restrict it)
 	std::string result;
-	if (!ModelTransferMgr::ComputeFileSha256(filename, result))
+	if (!ComputeFileSha256(filename, result))
 		return false;
 	outHash = result;
 	return true;

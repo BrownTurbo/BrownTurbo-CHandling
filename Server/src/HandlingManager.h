@@ -2,6 +2,7 @@
 #include "CVehicleManager.hpp"
 #include "HandlingEnum.h"
 #include "HandlingStruct.h"
+#include "CustomVehicleProtocol.hpp"
 
 #include <Impl/network_impl.hpp>
 #include <sdk.hpp>
@@ -10,27 +11,13 @@
 #include <Server/Components/Pawn/pawn.hpp>
 #include <Server/Components/Vehicles/vehicles.hpp>
 #include <array>
+#include <string>
 #include <unordered_map>
 #include <unordered_set>
 
 namespace HandlingMgr
 {
 #pragma pack(push, 1)
-struct CustomVehicleDef
-{
-	uint32_t customModelId;
-	uint32_t visualBaseModelId;
-	uint32_t audioBaseModelId;
-	uint32_t handlingBaseModelId;
-	int16_t engineSoundId;
-	char dffUrl[128];
-	char dffHash[65];
-	char txdUrl[128];
-	char txdHash[65];
-	char colUrl[128];
-	char colHash[65];
-};
-
 struct stHandlingMod
 {
 	CHandlingAttribType type;
@@ -57,7 +44,7 @@ struct stVehicleHandlingEntry : stHandlingEntry
 
 extern std::unordered_map<uint16_t, struct stVehicleHandlingEntry> vehicleHandlings;
 extern std::unordered_map<uint16_t, struct stHandlingEntry> playerHandlings; // key = playerid
-extern std::unordered_map<uint32_t, CustomVehicleDef> customVehicleDefs; // key = modelId
+extern std::unordered_map<uint32_t, CustomVeh::Protocol::VehicleDefinition> customVehicleDefs; // key = modelId
 extern std::unordered_set<uint32_t> customVehicleModels;
 
 stHandlingEntry* GetModelHandlingEntry(uint32_t modelid);
@@ -102,15 +89,11 @@ bool GetPlayerHandling(uint16_t playerid, CHandlingAttrib attrib, uint8_t& ret);
 
 bool ResetAll(uint16_t playerid);
 
-void RegisterCustomVehicle(uint32_t customModelId, uint32_t visualBase, uint32_t audioBase, uint32_t handlingBase,
-	int16_t engineSoundId,
-	const char* dffUrl, const char* dffHash,
-	const char* txdUrl, const char* txdHash);
 void UnregisterCustomVehicle(uint32_t customModelId);
-void BeginCustomVehicleDef(uint32_t customModelId, uint32_t visualBase, uint32_t audioBase, uint32_t handlingBase, int16_t engineSoundId);
-bool SetCustomVehicleDff(uint32_t customModelId, const char* dffUrl, const char* dffHash);
-bool SetCustomVehicleTxd(uint32_t customModelId, const char* txdUrl, const char* txdHash);
-bool SetCustomVehicleCol(uint32_t customModelId, const char* colUrl, const char* colHash);
+void BeginCustomVehicleDef(uint32_t customModelId, uint32_t visualBase, uint32_t audioBase, uint32_t handlingBase, CustomVeh::Protocol::EngineSound engineSoundId);
+bool SetCustomVehicleDff(uint32_t customModelId, std::string dffFile);
+bool SetCustomVehicleTxd(uint32_t customModelId, std::string txdFile);
+bool SetCustomVehicleCol(uint32_t customModelId, std::string colFile);
 bool CommitCustomVehicleDef(uint32_t customModelId);
 bool IsCustomVehicle(uint32_t modelId);
 void SendCustomVehicleDefToPlayer(IPlayer& player, uint32_t modelId);

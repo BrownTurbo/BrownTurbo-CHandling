@@ -58,11 +58,6 @@ enum AssetFlags : uint32_t
 	HasCol = 1u << 2
 };
 
-struct Hash256
-{
-	std::array<uint8_t, 32> bytes {};
-};
-
 #pragma pack(push, 1)
 
 struct AssetDescriptor
@@ -72,7 +67,20 @@ struct AssetDescriptor
 	uint32_t compressedSize;
 	uint32_t chunkSize;
 	uint32_t chunkCount;
-	Hash256 sha256;
+	std::string sha256;
+	std::string filename;
+};
+
+struct EngineSound
+{
+	int16_t OnSound;
+	int16_t OffSound;
+};
+
+struct CelerateSound
+{
+	int16_t accelerateSound;
+	int16_t decelerateSound;
 };
 
 struct VehicleDefinition
@@ -84,7 +92,8 @@ struct VehicleDefinition
 	uint16_t handlingBaseModel;
 	uint16_t audioBaseModel;
 
-	int16_t engineSoundId;
+	EngineSound engineSoundId;
+	CelerateSound celerateSoundId;
 
 	uint32_t flags;
 
@@ -116,7 +125,7 @@ struct AssetRequest
 
 	AssetType type;
 
-	Hash256 sha256;
+	std::string sha256;
 };
 
 struct AssetResume
@@ -128,7 +137,7 @@ struct AssetResume
 
 	AssetType type;
 
-	Hash256 sha256;
+	std::string sha256;
 
 	uint32_t nextChunk;
 };
@@ -148,7 +157,7 @@ struct AssetBegin
 	uint32_t chunkSize;
 	uint32_t chunkCount;
 
-	Hash256 sha256;
+	std::string sha256;
 };
 
 struct AssetChunkHeader
@@ -164,7 +173,7 @@ struct AssetEnd
 
 	uint32_t chunkCount;
 
-	Hash256 sha256;
+	std::string sha256;
 };
 
 struct AssetVerified
@@ -176,7 +185,7 @@ struct AssetVerified
 
 	AssetType type;
 
-	Hash256 sha256;
+	std::string sha256;
 };
 
 #pragma pack(pop)
