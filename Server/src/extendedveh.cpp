@@ -105,7 +105,7 @@ void ExtendedVehCompo::onInit(IComponentList* components)
 	vehicles_ = components->queryComponent<IVehiclesComponent>();
 	if (!vehicles_)
 	{
-		core_->logLn(LogLevel::Error, "Error loading component %.*s: Vehicles component not loaded", name.data());
+		core_->logLn(LogLevel::Error, "Error loading component %s: Vehicles component not loaded", name.data());
 		return;
 	}
 	if (vehicles_)
@@ -134,7 +134,7 @@ void ExtendedVehCompo::onAmxLoad(IPawnScript& script)
 	core_->logLn(LogLevel::Message, "");
 	core_->logLn(LogLevel::Message, " =======================================================================");
 	core_->logLn(LogLevel::Message,
-		"  ExtendedVehicles %.*d.%.*d.%.*d%.*s by Zorono) loaded!",
+		"  ExtendedVehicles %d.%d.%d%s by Zorono) loaded!",
 		EXTVEH_VERSION_MAJOR, EXTVEH_VERSION_MINOR, EXTVEH_VERSION_PATCH,
 		(EXTVEH_PHASE_DEV ? "-dev" : ""));
 	core_->logLn(LogLevel::Message, " =======================================================================");
@@ -148,7 +148,7 @@ void ExtendedVehCompo::onAmxUnload(IPawnScript& script)
 	core_->logLn(LogLevel::Message, "");
 	core_->logLn(LogLevel::Message, " =======================================================================");
 	core_->logLn(LogLevel::Message,
-		"  ExtendedVehicles %.*d.%.*d.%.*d%.*s by Zorono) unloaded!",
+		"  ExtendedVehicles %d.%d.%d%s by Zorono) unloaded!",
 		EXTVEH_VERSION_MAJOR, EXTVEH_VERSION_MINOR, EXTVEH_VERSION_PATCH,
 		(EXTVEH_PHASE_DEV ? "-dev" : ""));
 	core_->logLn(LogLevel::Message, " =======================================================================");
@@ -167,8 +167,8 @@ bool ExtendedVehCompo::onReceivePacket(IPlayer& peer, int id,
 	if (id == (uint8_t)CHandlingPacketID::PKT_CHANDLING)
 	{
 		core_->logLn(LogLevel::Debug,
-			"[ExtendedVeh] Received custom packet ID %.*d from player "
-			"%.*d (size=%.*d)\n",
+			"[ExtendedVeh] Received custom packet ID %d from player "
+			"%d (size=%d)\n",
 			id, peer.getID(), bs.GetNumberOfBytesUsed());
 		if (bs.GetNumberOfUnreadBits() >= 8)
 		{

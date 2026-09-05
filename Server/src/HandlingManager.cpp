@@ -797,18 +797,25 @@ void SendCustomVehicleDefToPlayer(IPlayer& player, uint32_t modelId)
 		return;
 
 	NetworkBitStream bs;
+	auto writeToStream = [&bs](const std::string& s, size_t fixedLen)
+	{
+		std::string padded = s;
+		padded.resize(fixedLen, '\0');
+		bs.Write(padded.data(), static_cast<int>(fixedLen));
+	};
+
 	const auto& def = it->second;
 	bs.Write(def.customModelId);
 	bs.Write(def.visualBaseModel);
 	bs.Write(def.audioBaseModel);
 	bs.Write(def.handlingBaseModel);
 	bs.Write(def.engineSoundId);
-	bs.Write(def.dff.filename.c_str(), 128);
-	bs.Write(def.dff.sha256.c_str(), 65);
-	bs.Write(def.txd.filename.c_str(), 128);
-	bs.Write(def.txd.sha256.c_str(), 65);
-	bs.Write(def.col.filename.c_str(), 128);
-	bs.Write(def.col.sha256.c_str(), 65);
+	writeToStream(def.dff.filename, 128);
+	writeToStream(def.dff.sha256, 65);
+	writeToStream(def.txd.filename, 128);
+	writeToStream(def.txd.sha256, 65);
+	writeToStream(def.col.filename, 128);
+	writeToStream(def.col.sha256, 65);
 	player.sendRPC(CHandlingRPCID::CUSTOM_VEHICLE_DEF, Span<uint8_t>(bs.GetData(), bs.GetNumberOfBytesUsed()), 0, false);
 }
 
