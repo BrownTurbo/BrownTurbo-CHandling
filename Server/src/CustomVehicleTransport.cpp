@@ -1,4 +1,5 @@
 #include "CustomVehicleTransport.h"
+#include "../../Shared/CustomVehicleProtocol.hpp"
 #include <RakNet/bitstream.hpp>
 
 namespace CustomVehicleTransport

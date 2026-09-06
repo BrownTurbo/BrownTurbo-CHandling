@@ -6,54 +6,10 @@
 
 namespace CustomVeh::Protocol {
 
-constexpr uint32_t PROTOCOL_MAGIC = 0x53435632u;
-constexpr uint16_t PROTOCOL_VERSION = 2;
-constexpr uint32_t PROTOCOL_REVISION = 0x00020003u;
+constexpr uint16_t VERSION = 2;
 constexpr std::size_t SHA256_HEX_LENGTH = 64;
 constexpr std::size_t SHA256_BUFFER_SIZE = SHA256_HEX_LENGTH + 1;
 constexpr std::size_t FILENAME_SIZE = 128;
-constexpr uint32_t DEFAULT_CHUNK_SIZE = 16u * 1024u;
-
-inline void WriteHeader(RakNet::BitStream &bs, Action action)
-{
-	bs.Write(PROTOCOL_MAGIC);
-	bs.Write(PROTOCOL_VERSION);
-	bs.Write(PROTOCOL_REVISION);
-	bs.Write(action);
-}
-
-inline bool ReadHeader(RakNet::BitStream &bs, Action &action)
-{
-	uint32_t magic;
-	uint16_t version;
-	uint32_t revision;
-	uint8_t actionByte;
-
-	if (!bs.Read(magic))
-		return false;
-
-	if (!bs.Read(version))
-		return false;
-
-	if (!bs.Read(revision))
-		return false;
-
-	if (!bs.Read(actionByte))
-		return false;
-
-	if (magic != PROTOCOL_MAGIC)
-		return false;
-
-	if (version != PROTOCOL_VERSION)
-		return false;
-
-	if (revision != PROTOCOL_REVISION)
-		return false;
-
-	action = static_cast<Action>(actionByte);
-
-	return true;
-}
 
 enum class Action : uint8_t {
 	Init = 10,
