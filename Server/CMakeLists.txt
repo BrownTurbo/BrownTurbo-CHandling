@@ -77,9 +77,11 @@ function(ListFilesInSubmodule directory_path pattern)
 endfunction()
 ### .........
 ListFilesInSubmodule("${CMAKE_CURRENT_SOURCE_DIR}/src" "*.cpp" 1)
+ListFilesInSubmodule("${CMAKE_CURRENT_SOURCE_DIR}/../Shared" "*.cpp" 1)
 ListFilesInSubmodule("${CMAKE_CURRENT_SOURCE_DIR}/src" "*.hpp" 1)
-ListFilesInSubmodule("${CMAKE_CURRENT_SOURCE_DIR}/src" "*.c" 1)
+ListFilesInSubmodule("${CMAKE_CURRENT_SOURCE_DIR}/../Shared" "*.hpp" 1)
 ListFilesInSubmodule("${CMAKE_CURRENT_SOURCE_DIR}/src" "*.h" 1)
+ListFilesInSubmodule("${CMAKE_CURRENT_SOURCE_DIR}/../Shared" "*.h" 1)
 
 foreach(PROJECT_FILE IN ITEMS ${COMPONENT_STRUCTURES})
     get_filename_component(FileExt ${PROJECT_FILE} EXT)

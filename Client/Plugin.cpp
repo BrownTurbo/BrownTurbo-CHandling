@@ -45,13 +45,14 @@
 #include "defs.h"
 #include "handling_manager.hpp"
 
-#include "assetdownloader.hpp"
 #include "audioextender.hpp"
 #include "binaryrwparser.hpp"
 #include "streamingextender.hpp"
 
 #include "CollisionLoader.h"
 #include "ImGuiOverlay.h"
+#include "CustomVehicleProtocol.hpp"
+#include "crypto.hpp"
 
 namespace fs = std::filesystem;
 using namespace plugin;
@@ -60,18 +61,28 @@ ExtendedVeh::Collision::CollisionLoader* colLoader = &ExtendedVeh::Collision::Co
 
 class CustomVehiclesASI {
 private:
+	enum class AssetState {
+		Pending,
+		Ready,
+		Failed
+	};
+
 	struct PendingCustomVehicle {
-		CustomVehicleDef def;
+		CustomVeh::Protocol::VehicleDefinition def;
 		CVehicleModelInfo* modelInfo = nullptr;
 		std::vector<uint8_t> txd;
 		std::vector<uint8_t> dff;
 		std::vector<uint8_t> col;
-		bool dffReady = false;
-		bool txdReady = false;
-		bool colReady = true;
+		fs::path dffPath;
+		AssetState dffState = AssetState::Pending;
+		fs::path txdPath;
+		AssetState txdState = AssetState::Pending;
+		fs::path colPath;
+		AssetState colState = AssetState::Pending;
+		bool queuedForFinalize = false;
+		mutable std::mutex assetMutex;
 	};
 
-	std::unique_ptr<AssetDownloader> m_pipeline;
 	std::queue<std::shared_ptr<PendingCustomVehicle>> m_completedQueue;
 	std::mutex m_queueMutex;
 	std::mutex m_pendingDefMutex;
@@ -81,66 +92,175 @@ private:
 	std::mutex m_destructionMutex;
 	bool m_runtimeInitialized = false;
 
-	void CreateModelAndBeginDownloads(std::shared_ptr<PendingCustomVehicle> pending)
+public:
+	bool ReadAssetDescriptor(RakNet::BitStream& bs, CustomVeh::Protocol::AssetDescriptor& asset)
+	{
+		if (!bs.Read(asset.type))
+			return false;
+
+		if (!bs.Read(asset.size))
+			return false;
+
+		if (!bs.Read(asset.compressedSize))
+			return false;
+
+		if (!bs.Read(asset.chunkSize))
+			return false;
+
+		if (!bs.Read(asset.chunkCount))
+			return false;
+
+		char sha256[CustomVeh::Protocol::SHA256_BUFFER_SIZE];
+		if (!bs.Read(sha256, CustomVeh::Protocol::SHA256_BUFFER_SIZE))
+			return false;
+		asset.sha256 = std::string(sha256);
+
+		char filename[CustomVeh::Protocol::FILENAME_SIZE];
+		if (!bs.Read(filename, CustomVeh::Protocol::FILENAME_SIZE))
+			return false;
+		asset.filename = filename;
+
+		return true;
+	}
+
+	bool ReadVehicleDefinition(RakNet::BitStream& bs, CustomVeh::Protocol::VehicleDefinition& def)
+	{
+		if (!bs.Read(def.customModelId))
+			return false;
+		if (!bs.Read(def.visualBaseModel))
+			return false;
+		if (!bs.Read(def.handlingBaseModel))
+			return false;
+		if (!bs.Read(def.audioBaseModel))
+			return false;
+		if (!bs.Read(def.engineSoundId.OnSound))
+			return false;
+		if (!bs.Read(def.engineSoundId.OffSound))
+			return false;
+		if (!bs.Read(def.celerateSoundId.accelerateSound))
+			return false;
+		if (!bs.Read(def.celerateSoundId.decelerateSound))
+			return false;
+		if (!bs.Read(def.flags))
+			return false;
+		if (!ReadAssetDescriptor(bs, def.dff))
+			return false;
+		if (!ReadAssetDescriptor(bs, def.txd))
+			return false;
+		if (!ReadAssetDescriptor(bs, def.col))
+			return false;
+
+		return true;
+	}
+
+private:
+	void CreateModelAndBeginTransfers(std::shared_ptr<PendingCustomVehicle> pending)
 	{
 		pending->modelInfo = StreamingExtender::CreateCustomModel(pending->def);
 		if (!pending->modelInfo) {
-			return; // nothing to attach a clump to later - don't bother downloading
+			return;
 		}
 
-		AssetDownloadTask txdTask;
-		txdTask.modelId = static_cast<int32_t>(pending->def.customModelId);
-		txdTask.url = pending->def.txdUrl;
-		txdTask.expectedSha256 = pending->def.txdHash;
-		txdTask.localCachePath = fs::path("models") / (std::to_string(pending->def.customModelId) + "_txd.bin");
-		txdTask.onComplete = [this, pending](DownloadResult res) {
-			if (!res.Success())
+		auto pushToQueue = [this, pending]() {
+			if (pending->queuedForFinalize)
 				return;
-			pending->txd = std::move(res.data);
+			pending->queuedForFinalize = true;
 
-			AssetDownloadTask dffTask;
-			dffTask.modelId = static_cast<int32_t>(pending->def.customModelId);
-			dffTask.url = pending->def.dffUrl;
-			dffTask.expectedSha256 = pending->def.dffHash;
-			dffTask.localCachePath = fs::path("models") / (std::to_string(pending->def.customModelId) + "_dff.bin");
-			dffTask.onComplete = [this, pending](DownloadResult dffRes) {
-				if (!dffRes.Success())
-					return;
-				pending->dff = BinaryRwParser::ExtractClump(dffRes.data);
-				if (pending->dff.empty())
-					return;
-				pending->dffReady = true;
-
-				auto pushToQueue = [this, pending]() {
-					std::lock_guard<std::mutex> lock(m_queueMutex);
-					m_completedQueue.push(pending);
-				};
-
-				// If a custom collision URL is provided, download it next.
-				if (pending->def.colUrl[0] != '\0') {
-					AssetDownloadTask colTask;
-					colTask.modelId = static_cast<int32_t>(pending->def.customModelId);
-					colTask.url = pending->def.colUrl;
-					colTask.expectedSha256 = pending->def.colHash;
-					colTask.localCachePath = fs::path("models") / (std::to_string(pending->def.customModelId) + "_col.bin");
-
-					colTask.onComplete = [pending, pushToQueue](DownloadResult colRes) {
-						if (colRes.Success()) {
-							pending->col = std::move(colRes.data);
-							pending->colReady = true;
-						}
-						pushToQueue();
-					};
-					m_pipeline->Enqueue(std::move(colTask));
-				} else {
-					// No custom collision requested, proceed to queue
-					pending->colReady = true;
-					pushToQueue();
-				}
-			};
-			m_pipeline->Enqueue(std::move(dffTask));
+			std::lock_guard lock(m_queueMutex);
+			m_completedQueue.push(pending);
 		};
-		m_pipeline->Enqueue(std::move(txdTask));
+
+		auto beginCol = [this, pending, pushToQueue]() {
+			if (pending->def.col.filename[0] == '\0') {
+				std::lock_guard<std::mutex> lock(pending->assetMutex);
+				pending->colState = AssetState::Failed;
+				return;
+			}
+			ModelTransferClient::Instance().RequestFile(
+				pending->def.customModelId, ModelFileKind::Col, pending->def.col.sha256,
+				[pending, pushToQueue](bool ok, const fs::path& path) {
+					if (ok) {
+						std::lock_guard<std::mutex> lock(pending->assetMutex);
+						pending->colPath = path;
+						pending->colState = AssetState::Ready;
+					}
+					pushToQueue();
+				});
+		};
+
+		auto beginDff = [this, pending, beginCol](bool ok, const fs::path& path) {
+			if (!ok) {
+				{
+					std::lock_guard<std::mutex> lock(pending->assetMutex);
+					pending->dffState = AssetState::Failed;
+				}
+				return;
+			}
+
+			{
+				std::lock_guard<std::mutex> lock(pending->assetMutex);
+				pending->dffPath = path;
+			}
+
+			std::ifstream file(path, std::ios::binary | std::ios::ate);
+			if (!file) {
+				{
+					std::lock_guard<std::mutex> lock(pending->assetMutex);
+					pending->dffState = AssetState::Failed;
+				}
+				return;
+			}
+			const auto size = file.tellg();
+			if (size <= 0) {
+				{
+					std::lock_guard<std::mutex> lock(pending->assetMutex);
+					pending->dffState = AssetState::Failed;
+				}
+				return;
+			}
+
+			file.seekg(0, std::ios::beg);
+
+			std::vector<std::uint8_t>raw(static_cast<std::size_t>(size));
+
+			if (!file.read(reinterpret_cast<char*>(raw.data()), size)) {
+				{
+					std::lock_guard<std::mutex> lock(pending->assetMutex);
+					pending->dffState = AssetState::Failed;
+				}
+				return;
+			}
+
+			pending->dff = BinaryRwParser::ExtractClump(raw);
+			if (pending->dff.empty()) {
+				{
+					std::lock_guard<std::mutex> lock(pending->assetMutex);
+					pending->dffState = AssetState::Failed;
+				}
+				return;
+			}
+			{
+				std::lock_guard<std::mutex> lock(pending->assetMutex);
+				pending->dffState = AssetState::Ready;
+			}
+
+			beginCol();
+		};
+
+		ModelTransferClient::Instance().RequestFile(
+			pending->def.customModelId, ModelFileKind::Txd, pending->def.txd.sha256,
+			[this, pending, beginDff](bool ok, const fs::path& path) {
+				if (!ok)
+					return;
+
+				{
+					std::lock_guard<std::mutex> lock(pending->assetMutex);
+					pending->txdPath = path;
+					pending->txdState = AssetState::Ready;
+				}
+
+				ModelTransferClient::Instance().RequestFile(pending->def.customModelId, ModelFileKind::Dff, pending->def.dff.sha256, beginDff);
+			});
 	}
 
 	void FinalizeCustomVehicle(std::shared_ptr<PendingCustomVehicle> pending)
@@ -183,7 +303,7 @@ private:
 						CTxdStore::RemoveTxdSlot(txdSlot);
 						SendMsg(0xFF0000, std::format("[CustomVeh] Failed to finalize clump for model {}", pending->def.customModelId).c_str());
 					}
-					if (pending->colReady && !pending->col.empty()) {
+					if (pending->colState == AssetState::Ready && (pending->def.flags & CustomVeh::Protocol::HasCol) != 0) {
 						ExtendedVeh::Collision::CollisionLoader* colLoader = &ExtendedVeh::Collision::CollisionLoader::Instance();
 						if (!colLoader->LoadCollisionFromMemory(pending->col.data(), pending->col.size(), newModel)) {
 							SendMsg(0xFF8800, std::format("[CustomVeh] Warning: Failed to parse COL for model {}", pending->def.customModelId).c_str());
@@ -215,16 +335,12 @@ public:
 		Events::initRwEvent.Add([this]() {
 			if (!m_runtimeInitialized) {
 				fs::create_directories("models");
-				m_pipeline = std::make_unique<AssetDownloader>(4);
 				// AudioExtender::InstallHooks();
 				m_runtimeInitialized = true;
 			}
 		});
 
 		Events::shutdownRwEvent.Add([this]() {
-			if (m_pipeline) {
-				m_pipeline->Shutdown();
-			}
 			// AudioExtender::RestoreHooks();
 			StreamingExtender::ClearAllCustomModels();
 		});
@@ -250,7 +366,7 @@ public:
 		}
 	}
 
-	void HandleCustomVehicleDef(const CustomVehicleDef& def)
+	void HandleCustomVehicleDef(const CustomVeh::Protocol::VehicleDefinition& def)
 	{
 		auto pending = std::make_shared<PendingCustomVehicle>();
 		pending->def = def;
@@ -278,8 +394,8 @@ public:
 		while (!localQueue.empty()) {
 			auto pending = localQueue.front();
 			localQueue.pop();
-			AudioExtender::RegisterVehicleAudio(pending->def.customModelId, pending->def.audioBaseModelId, pending->def.engineSoundId.OnSound, pending->def.engineSoundId.OffSound, pending->def.celerateSoundId.accelerateSound, pending->def.celerateSoundId.decelerateSound);
-			CreateModelAndBeginDownloads(pending);
+			AudioExtender::RegisterVehicleAudio(pending->def.customModelId, pending->def.audioBaseModel, pending->def.engineSoundId.OnSound, pending->def.engineSoundId.OffSound, pending->def.celerateSoundId.accelerateSound, pending->def.celerateSoundId.decelerateSound);
+			CreateModelAndBeginTransfers(pending);
 		}
 	}
 
@@ -341,8 +457,9 @@ void InitializeHooks()
 
 	rakhook::on_receive_rpc += [](unsigned char& id, RakNet::BitStream* bs) -> bool {
 		if (id == RPC_CUSTOM_VEHICLE_DEF) {
-			CustomVehicleDef def;
-			bs->Read(reinterpret_cast<char*>(&def), sizeof(CustomVehicleDef));
+			CustomVeh::Protocol::VehicleDefinition def;
+			if (!_customVehInstance.ReadVehicleDefinition(*bs, def))
+				return false;
 			_customVehInstance.HandleCustomVehicleDef(def);
 			return false;
 		} else if (id == RPC_DESTROY_CUSTOM_VEHICLE_MODEL) {

@@ -2,7 +2,7 @@
 #include "CVehicleManager.hpp"
 #include "HandlingEnum.h"
 #include "HandlingStruct.h"
-#include "CustomVehicleProtocol.hpp"
+#include "../../Shared/CustomVehicleProtocol.hpp"
 
 #include <Impl/network_impl.hpp>
 #include <sdk.hpp>

@@ -58,8 +58,11 @@ endfunction()
 ### .........
 
 ListFilesInSubmodule("${CMAKE_CURRENT_SOURCE_DIR}" "*.cpp" 1)
+ListFilesInSubmodule("${CMAKE_CURRENT_SOURCE_DIR}/../Shared" "*.cpp" 1)
 ListFilesInSubmodule("${CMAKE_CURRENT_SOURCE_DIR}" "*.hpp" 1)
+ListFilesInSubmodule("${CMAKE_CURRENT_SOURCE_DIR}/../Shared" "*.hpp" 1)
 ListFilesInSubmodule("${CMAKE_CURRENT_SOURCE_DIR}" "*.h" 1)
+ListFilesInSubmodule("${CMAKE_CURRENT_SOURCE_DIR}/../Shared" "*.h" 1)
 add_library(${PROJECT_NAME} SHARED ${PLUGIN_STRUCTURES})
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE

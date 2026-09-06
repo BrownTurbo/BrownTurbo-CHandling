@@ -28,43 +28,7 @@
 
 #include "defs.h"
 #include "handling_manager.hpp"
-
-std::string Sha256HexOfBuffer(const uint8_t* data, size_t length)
-{
-	BCRYPT_ALG_HANDLE hAlg = nullptr;
-	BCRYPT_HASH_HANDLE hHash = nullptr;
-	DWORD cbHash = 0, cbData = 0;
-	std::string result;
-
-	if (BCryptOpenAlgorithmProvider(&hAlg, BCRYPT_SHA256_ALGORITHM, nullptr, 0) < 0)
-		return result;
-	if (BCryptGetProperty(hAlg, BCRYPT_HASH_LENGTH, reinterpret_cast<PUCHAR>(&cbHash), sizeof(DWORD), &cbData, 0) < 0) {
-		BCryptCloseAlgorithmProvider(hAlg, 0);
-		return result;
-	}
-	std::vector<uint8_t> hash(cbHash);
-	if (BCryptCreateHash(hAlg, &hHash, nullptr, 0, nullptr, 0, 0) >= 0) {
-		BCryptHashData(hHash, const_cast<PUCHAR>(data), static_cast<ULONG>(length), 0);
-		if (BCryptFinishHash(hHash, hash.data(), cbHash, 0) >= 0) {
-			char hex[65] = {};
-			for (size_t i = 0; i < hash.size(); ++i)
-				std::snprintf(hex + i * 2, 3, "%02x", hash[i]);
-			result.assign(hex);
-		}
-		BCryptDestroyHash(hHash);
-	}
-	BCryptCloseAlgorithmProvider(hAlg, 0);
-	return result;
-}
-
-std::string Sha256HexOfFile(const fs::path& path)
-{
-	std::ifstream file(path, std::ios::binary);
-	if (!file.is_open())
-		return "";
-	std::vector<uint8_t> data((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-	return Sha256HexOfBuffer(data.data(), data.size());
-}
+#include "CustomVehicleProtocol.hpp"
 
 ModelTransferClient::ModelTransferClient()
 {
@@ -216,7 +180,17 @@ void ModelTransferClient::OnTransferBegin(RakNet::BitStream* bs)
 	uint32_t compressedSize, uncompressedSize, totalChunks;
 	char shaBuf[65] = {};
 
-	if (!bs->Read(modelId) || !bs->Read(kindByte) || !bs->Read(compressedSize) || !bs->Read(uncompressedSize) || !bs->Read(totalChunks) || !bs->Read(shaBuf, 65))
+	if (!bs->Read(modelId))
+		return;
+	if (!bs->Read(kindByte))
+		return;
+	if (!bs->Read(compressedSize))
+		return;
+	if (!bs->Read(uncompressedSize))
+		return;
+	if (!bs->Read(totalChunks))
+		return;
+	if (!bs->Read(shaBuf, CustomVeh::Protocol::SHA256_BUFFER_SIZE))
 		return;
 
 	if (uncompressedSize == 0 || uncompressedSize > TransferConfig::Instance().clientMaxUncompressedSize) {
@@ -259,18 +233,24 @@ void ModelTransferClient::OnTransferChunk(RakNet::BitStream* bs)
 	uint32_t chunkIndex;
 	uint16_t chunkLen;
 
-	if (!bs->Read(modelId) || !bs->Read(kindByte) || !bs->Read(chunkIndex) || !bs->Read(chunkLen))
+	if (!bs->Read(modelId))
+		return;
+	if (!bs->Read(kindByte))
+		return;
+	if (!bs->Read(chunkIndex))
+		return;
+	if (!bs->Read(chunkLen))
 		return;
 
 	std::lock_guard<std::mutex> lock(m_mutex);
 	auto it = m_active.find(Key(modelId, static_cast<ModelFileKind>(kindByte)));
 	if (it == m_active.end()) {
-		bs->IgnoreBits(chunkLen * 8);
+		bs->IgnoreBits(8);
 		return;
 	}
 
 	auto& entry = it->second;
-	const uint32_t offset = chunkIndex * 4096u; // kFileChunkSize, matches server
+	const uint32_t offset = static_cast<std::uint64_t>(chunkIndex * 4096u);
 	if (offset + chunkLen > entry.compressedBuffer.size())
 		return;
 

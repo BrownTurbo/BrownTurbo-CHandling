@@ -22,31 +22,6 @@ struct RPC_WorldVehicleAdd_Data {
 	uint32_t bodyColor2;
 	uint8_t zAngle;
 };
-
-struct EngineSound {
-	int16_t OnSound;
-	int16_t OffSound;
-};
-
-struct CelerateSound {
-	int16_t accelerateSound;
-	int16_t decelerateSound;
-};
-
-struct CustomVehicleDef {
-	uint32_t customModelId;
-	uint32_t visualBaseModelId; // Dictates dummy nodes and collision
-	uint32_t audioBaseModelId; // Dictates base audio properties
-	uint32_t handlingBaseModelId; // Dictates physics (acceleration, suspension)
-	EngineSound engineSoundId; // Dictates custom engine sound (-1 for audioBase default)
-	CelerateSound celerateSoundId; // Dictates custom celeration sound
-	char dffUrl[128];
-	char dffHash[65]; // SHA-256 Hex String + Null Terminator
-	char txdUrl[128];
-	char txdHash[65]; // SHA-256 Hex String + Null Terminator
-	char colUrl[128];
-	char colHash[65];
-};
 #pragma pack(pop)
 
 //

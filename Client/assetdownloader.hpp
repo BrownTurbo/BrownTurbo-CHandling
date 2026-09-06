@@ -50,7 +50,7 @@ struct DownloadResult {
 
 struct AssetDownloadTask {
 	int32_t modelId { -1 };
-	std::string url {};
+	std::string file {};
 	std::string expectedSha256 {};
 	std::filesystem::path localCachePath {};
 	std::function<void(DownloadResult)> onComplete { nullptr };
@@ -183,7 +183,7 @@ private:
 		}
 
 		// 2. NETWORK DOWNLOAD SETUP (WinINet)
-		if (task.url.rfind("https://", 0) != 0) {
+		if (task.file.rfind("https://", 0) != 0) {
 			result.status = DownloadStatus::Err_UrlOpenFailed;
 			result.errorMessage = "Only HTTPS asset URLs are allowed.";
 			if (task.onComplete)
@@ -207,11 +207,11 @@ private:
 		InternetSetOptionA(hInternet, INTERNET_OPTION_SEND_TIMEOUT, &timeoutMs, sizeof(timeoutMs));
 
 		DWORD flags = INTERNET_FLAG_RELOAD | INTERNET_FLAG_NO_CACHE_WRITE | INTERNET_FLAG_PRAGMA_NOCACHE;
-		if (task.url.rfind("https://", 0) == 0) {
+		if (task.file.rfind("https://", 0) == 0) {
 			flags |= INTERNET_FLAG_SECURE;
 		}
 
-		HINTERNET hUrl = InternetOpenUrlA(hInternet, task.url.c_str(), NULL, 0, flags, 0);
+		HINTERNET hUrl = InternetOpenUrlA(hInternet, task.file.c_str(), NULL, 0, flags, 0);
 		if (!hUrl) {
 			DWORD err = GetLastError();
 			InternetCloseHandle(hInternet);

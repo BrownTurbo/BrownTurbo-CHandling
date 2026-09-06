@@ -1,16 +1,61 @@
 #pragma once
 
 #include <array>
+#include <string>
 #include <cstdint>
 
-namespace CustomVeh::Protocol
-{
-constexpr uint16_t VERSION = 2;
+namespace CustomVeh::Protocol {
 
-constexpr uint8_t PACKET_ID = 251;
+constexpr uint32_t PROTOCOL_MAGIC = 0x53435632u;
+constexpr uint16_t PROTOCOL_VERSION = 2;
+constexpr uint32_t PROTOCOL_REVISION = 0x00020003u;
+constexpr std::size_t SHA256_HEX_LENGTH = 64;
+constexpr std::size_t SHA256_BUFFER_SIZE = SHA256_HEX_LENGTH + 1;
+constexpr std::size_t FILENAME_SIZE = 128;
+constexpr uint32_t DEFAULT_CHUNK_SIZE = 16u * 1024u;
 
-enum class Action : uint8_t
+inline void WriteHeader(RakNet::BitStream &bs, Action action)
 {
+	bs.Write(PROTOCOL_MAGIC);
+	bs.Write(PROTOCOL_VERSION);
+	bs.Write(PROTOCOL_REVISION);
+	bs.Write(action);
+}
+
+inline bool ReadHeader(RakNet::BitStream &bs, Action &action)
+{
+	uint32_t magic;
+	uint16_t version;
+	uint32_t revision;
+	uint8_t actionByte;
+
+	if (!bs.Read(magic))
+		return false;
+
+	if (!bs.Read(version))
+		return false;
+
+	if (!bs.Read(revision))
+		return false;
+
+	if (!bs.Read(actionByte))
+		return false;
+
+	if (magic != PROTOCOL_MAGIC)
+		return false;
+
+	if (version != PROTOCOL_VERSION)
+		return false;
+
+	if (revision != PROTOCOL_REVISION)
+		return false;
+
+	action = static_cast<Action>(actionByte);
+
+	return true;
+}
+
+enum class Action : uint8_t {
 	Init = 10,
 	InitResponse = 11,
 
@@ -43,25 +88,44 @@ enum class Action : uint8_t
 	AssetReady = 59
 };
 
-enum class AssetType : uint8_t
-{
+enum class AssetType : uint8_t {
 	Dff = 0,
 	Txd = 1,
 	Col = 2
 };
 
-enum AssetFlags : uint32_t
-{
+enum AssetFlags : uint32_t {
 	None = 0,
 	HasDff = 1u << 0,
 	HasTxd = 1u << 1,
 	HasCol = 1u << 2
 };
 
+enum class RejectReason : uint8_t {
+	Unknown = 0,
+	InvalidProtocol = 1,
+	InvalidModel = 2,
+	InvalidAsset = 3,
+	AssetNotFound = 4,
+	HashMismatch = 5,
+	SizeExceeded = 6,
+	RateLimited = 7,
+	TooManyTransfers = 8,
+	InvalidResume = 9,
+	InvalidTransfer = 10,
+	ServerError = 11
+};
+
 #pragma pack(push, 1)
 
-struct AssetDescriptor
-{
+struct PacketHeader {
+	uint32_t magic;
+	uint16_t version;
+	uint32_t revision;
+	Action action;
+};
+
+struct AssetDescriptor {
 	AssetType type;
 	uint64_t size;
 	uint32_t compressedSize;
@@ -71,20 +135,17 @@ struct AssetDescriptor
 	std::string filename;
 };
 
-struct EngineSound
-{
+struct EngineSound {
 	int16_t OnSound;
 	int16_t OffSound;
 };
 
-struct CelerateSound
-{
+struct CelerateSound {
 	int16_t accelerateSound;
 	int16_t decelerateSound;
 };
 
-struct VehicleDefinition
-{
+struct VehicleDefinition {
 	uint32_t protocol;
 	uint32_t customModelId;
 
@@ -102,22 +163,19 @@ struct VehicleDefinition
 	AssetDescriptor col;
 };
 
-struct VehicleBinding
-{
+struct VehicleBinding {
 	uint32_t protocol;
 
 	uint16_t sampVehicleId;
 	uint32_t customModelId;
 };
 
-struct VehicleUnbinding
-{
+struct VehicleUnbinding {
 	uint32_t protocol;
 	uint16_t sampVehicleId;
 };
 
-struct AssetRequest
-{
+struct AssetRequest {
 	uint32_t protocol;
 
 	uint32_t transferId;
@@ -128,8 +186,7 @@ struct AssetRequest
 	std::string sha256;
 };
 
-struct AssetResume
-{
+struct AssetResume {
 	uint32_t protocol;
 
 	uint32_t transferId;
@@ -142,8 +199,7 @@ struct AssetResume
 	uint32_t nextChunk;
 };
 
-struct AssetBegin
-{
+struct AssetBegin {
 	uint32_t protocol;
 
 	uint32_t transferId;
@@ -160,15 +216,13 @@ struct AssetBegin
 	std::string sha256;
 };
 
-struct AssetChunkHeader
-{
+struct AssetChunkHeader {
 	uint32_t transferId;
 	uint32_t chunkIndex;
 	uint16_t payloadSize;
 };
 
-struct AssetEnd
-{
+struct AssetEnd {
 	uint32_t transferId;
 
 	uint32_t chunkCount;
@@ -176,10 +230,7 @@ struct AssetEnd
 	std::string sha256;
 };
 
-struct AssetVerified
-{
-	uint32_t protocol;
-
+struct AssetVerified {
 	uint32_t transferId;
 	uint32_t customModelId;
 

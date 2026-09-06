@@ -2,7 +2,7 @@
 #include <cstdint>
 #include <span>
 #include <sdk.hpp>
-#include "CustomVehicleProtocol.hpp"
+#include "../../Shared/CustomVehicleProtocol.hpp"
 
 namespace CustomVehicleTransport
 {

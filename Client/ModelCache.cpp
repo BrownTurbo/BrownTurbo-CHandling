@@ -1,5 +1,5 @@
 #include "ModelCache.h"
-#include "ModelTransferClient.h" // Sha256HexOfFile
+#include "crypto.hpp"
 
 std::optional<std::filesystem::path>
 ModelCache::TryGet(uint32_t modelId, uint8_t fileKind,
@@ -21,7 +21,9 @@ ModelCache::TryGet(uint32_t modelId, uint8_t fileKind,
 		return std::nullopt;
 	}
 
-	if (Sha256HexOfFile(path) != expectedSha256Hex) {
+	std::string calculatedsha256;
+	CryptoUtility::ComputeFileSHA256(path, calculatedsha256);
+	if (calculatedsha256 != expectedSha256Hex) {
 		fs::remove(path, ec); // stale/corrupt
 		return std::nullopt;
 	}

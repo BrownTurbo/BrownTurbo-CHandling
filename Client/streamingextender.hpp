@@ -25,14 +25,14 @@ private:
 	inline static void (*s_destructionRequeueCallback)(uint32_t) = nullptr;
 
 public:
-	static CVehicleModelInfo* CreateCustomModel(const CustomVehicleDef& def)
+	static CVehicleModelInfo* CreateCustomModel(const CustomVeh::Protocol::VehicleDefinition& def)
 	{
 		auto it = s_customModels.find(def.customModelId);
 		if (it != s_customModels.end() && it->second != nullptr) {
 			return it->second;
 		}
 
-		CBaseModelInfo* visualBase = CModelInfo::GetModelInfo(def.visualBaseModelId);
+		CBaseModelInfo* visualBase = CModelInfo::GetModelInfo(def.visualBaseModel);
 		if (!visualBase)
 			return nullptr;
 
@@ -46,7 +46,7 @@ public:
 		newModel->m_pRwObject = nullptr;
 		newModel->SetOwnsColModel(0);
 
-		CBaseModelInfo* handlingBase = CModelInfo::GetModelInfo(def.handlingBaseModelId);
+		CBaseModelInfo* handlingBase = CModelInfo::GetModelInfo(def.handlingBaseModel);
 		if (handlingBase) {
 			newModel->m_nHandlingId = reinterpret_cast<CVehicleModelInfo*>(handlingBase)->m_nHandlingId;
 		}

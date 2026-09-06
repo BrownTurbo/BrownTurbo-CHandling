@@ -803,19 +803,30 @@ void SendCustomVehicleDefToPlayer(IPlayer& player, uint32_t modelId)
 		padded.resize(fixedLen, '\0');
 		bs.Write(padded.data(), static_cast<int>(fixedLen));
 	};
+	auto writeAsset = [&bs, &writeToStream](const auto& asset)
+	{
+		bs.Write(asset.type);
+		bs.Write(asset.size);
+		bs.Write(asset.compressedSize);
+		bs.Write(asset.chunkSize);
+		bs.Write(asset.chunkCount);
+		writeToStream(asset.sha256, CustomVeh::Protocol::SHA256_BUFFER_SIZE);
+		writeToStream(asset.filename, CustomVeh::Protocol::FILENAME_SIZE);
+	};
 
 	const auto& def = it->second;
 	bs.Write(def.customModelId);
 	bs.Write(def.visualBaseModel);
-	bs.Write(def.audioBaseModel);
 	bs.Write(def.handlingBaseModel);
-	bs.Write(def.engineSoundId);
-	writeToStream(def.dff.filename, 128);
-	writeToStream(def.dff.sha256, 65);
-	writeToStream(def.txd.filename, 128);
-	writeToStream(def.txd.sha256, 65);
-	writeToStream(def.col.filename, 128);
-	writeToStream(def.col.sha256, 65);
+	bs.Write(def.audioBaseModel);
+	bs.Write(def.engineSoundId.OnSound);
+	bs.Write(def.engineSoundId.OffSound);
+	bs.Write(def.celerateSoundId.accelerateSound);
+	bs.Write(def.celerateSoundId.decelerateSound);
+	bs.Write(def.flags);
+	writeAsset(def.dff);
+	writeAsset(def.txd);
+	writeAsset(def.col);
 	player.sendRPC(CHandlingRPCID::CUSTOM_VEHICLE_DEF, Span<uint8_t>(bs.GetData(), bs.GetNumberOfBytesUsed()), 0, false);
 }
 
