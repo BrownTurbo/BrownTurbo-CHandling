@@ -1,6 +1,7 @@
 #include "CustomVehicleTransport.h"
 #include "../../Shared/CustomVehicleProtocol.hpp"
 #include <RakNet/bitstream.hpp>
+#include "PacketEnum.h"
 
 namespace CustomVehicleTransport
 {
@@ -15,7 +16,7 @@ namespace
 
 		explicit ScvActionPacket(CustomVeh::Protocol::Action action)
 		{
-			data.Write(static_cast<uint8_t>(CustomVeh::Protocol::PACKET_ID));
+			data.Write(static_cast<uint8_t>(CHandlingPacketID::PKT_CHANDLING));
 			data.Write(static_cast<uint8_t>(action));
 		}
 	};
@@ -24,7 +25,7 @@ namespace
 void SendVehicleBind(IPlayer& player, uint16_t sampVehicleId, uint32_t customModelId)
 {
 	CustomVeh::Protocol::VehicleBinding binding {};
-	binding.protocol = CustomVeh::Protocol::VERSION;
+	binding.protocol = CustomVeh::Protocol::PROTOCOL_VERSION;
 	binding.sampVehicleId = sampVehicleId;
 	binding.customModelId = customModelId;
 
@@ -37,7 +38,7 @@ void SendVehicleBind(IPlayer& player, uint16_t sampVehicleId, uint32_t customMod
 void SendVehicleUnbind(IPlayer& player, uint16_t sampVehicleId)
 {
 	CustomVeh::Protocol::VehicleUnbinding unbinding {};
-	unbinding.protocol = CustomVeh::Protocol::VERSION;
+	unbinding.protocol = CustomVeh::Protocol::PROTOCOL_VERSION;
 	unbinding.sampVehicleId = sampVehicleId;
 
 	ScvActionPacket pkt(CustomVeh::Protocol::Action::CustomVehicleUnbind);

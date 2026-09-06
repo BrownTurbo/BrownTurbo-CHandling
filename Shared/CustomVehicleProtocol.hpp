@@ -6,43 +6,44 @@
 
 namespace CustomVeh::Protocol {
 
-constexpr uint16_t VERSION = 2;
-constexpr std::size_t SHA256_HEX_LENGTH = 64;
-constexpr std::size_t SHA256_BUFFER_SIZE = SHA256_HEX_LENGTH + 1;
-constexpr std::size_t FILENAME_SIZE = 128;
+	constexpr uint16_t PROTOCOL_VERSION = 2;
+	constexpr std::size_t SHA256_HEX_LENGTH = 64;
+	constexpr std::size_t SHA256_BUFFER_SIZE = SHA256_HEX_LENGTH + 1;
+	constexpr std::size_t FILENAME_SIZE = 128;
 
-enum class Action : uint8_t {
-	Init = 10,
-	InitResponse = 11,
+	enum class Action : uint8_t
+	{
+		Init = 10,
+		InitResponse = 11,
 
-	ResetModel = 15,
-	ResetVehicle = 16,
-	SetVehicleHandling = 17,
-	SetModelHandling = 18,
+		ResetModel = 15,
+		ResetVehicle = 16,
+		SetVehicleHandling = 17,
+		SetModelHandling = 18,
 
-	SetPlayerHandling = 19,
-	ResetPlayerHandling = 20,
-	GetVehicleHandling = 21,
-	GetModelHandling = 22,
-	GetPlayerHandling = 23,
-	ResetAll = 24,
+		SetPlayerHandling = 19,
+		ResetPlayerHandling = 20,
+		GetVehicleHandling = 21,
+		GetModelHandling = 22,
+		GetPlayerHandling = 23,
+		ResetAll = 24,
 
-	CustomVehicleDefine = 40,
-	CustomVehicleBind = 41,
-	CustomVehicleUnbind = 42,
-	CustomVehicleDestroy = 43,
+		CustomVehicleDefine = 40,
+		CustomVehicleBind = 41,
+		CustomVehicleUnbind = 42,
+		CustomVehicleDestroy = 43,
 
-	AssetManifest = 50,
-	AssetRequest = 51,
-	AssetResume = 52,
-	AssetBegin = 53,
-	AssetChunk = 54,
-	AssetEnd = 55,
-	AssetVerified = 56,
-	AssetCancel = 57,
-	AssetRejected = 58,
-	AssetReady = 59
-};
+		AssetManifest = 50,
+		AssetRequest = 51,
+		AssetResume = 52,
+		AssetBegin = 53,
+		AssetChunk = 54,
+		AssetEnd = 55,
+		AssetVerified = 56,
+		AssetCancel = 57,
+		AssetRejected = 58,
+		AssetReady = 59
+	};
 
 enum class AssetType : uint8_t {
 	Dff = 0,
