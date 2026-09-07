@@ -175,7 +175,7 @@ native CHandlingAttribType:GetHandlingAttribType(CHandlingAttrib:attribute);
 native bool:IsPlayerUsingCHandling(playerid);
 
 // Model Handling Natives
-native bool:ResetModelHandling(modelid);
+native bool:ResetModelHandling(customModelId);
 native bool:SetModelHandlingFloat(modelid, CHandlingAttrib:attribute, Float:value);
 native bool:SetModelHandlingInt(modelid, CHandlingAttrib:attribute, value);
 native bool:GetModelHandlingFloat(modelid, CHandlingAttrib:attribute, &Float:result);
@@ -201,17 +201,17 @@ native bool:ResetAllHandling(playerid);
 
 // Custom Vehicle Models & Streaming Natives
 native bool:BeginCustomVehicleDef(customModelId, visualBase, audioBase, handlingBase, engineOnSoundId, engineOffSoundId);
-native bool:SetCustomVehicleDff(customModelId, const dffUrl[]);
-native bool:SetCustomVehicleTxd(customModelId, const txdUrl[]);
+native bool:SetCustomVehicleDff(customModelId);
+native bool:SetCustomVehicleTxd(customModelId);
 native bool:CommitCustomVehicleDef(customModelId);
 native bool:DestroyCustomVehicle(customModelId);
-native bool:IsCustomVehicleModel(modelid);
+native bool:IsCustomVehicleModel(customModelId);
 native bool:IsVehicleCustom(vehicleid);
-native SetCustomVehicleCol(modelid, const colUrl[]);
-native BindVehicleModel(vehicleid, modelid);
+native SetCustomVehicleCol(customModelId);
+native BindVehicleModel(vehicleid, customModelId);
 native GetFileSha256(const filename[], outputHash[]);
-native InvalidateModelCache(modelid, fileKind);
-native GetClientFileStoreStatus(playerid, modelId, fileKind);
+native InvalidateModelCache(customModelId, fileKind);
+native GetClientFileStoreStatus(playerid, customModelId, fileKind);
 
 /*
  * Stock Wrapper Helper for Single-Call Custom Vehicle Creation

@@ -91,9 +91,9 @@ bool ResetAll(uint16_t playerid);
 
 void UnregisterCustomVehicle(uint32_t customModelId);
 void BeginCustomVehicleDef(uint32_t customModelId, uint32_t visualBase, uint32_t audioBase, uint32_t handlingBase, CustomVeh::Protocol::EngineSound engineSoundId);
-bool SetCustomVehicleDff(uint32_t customModelId, std::string dffFile);
-bool SetCustomVehicleTxd(uint32_t customModelId, std::string txdFile);
-bool SetCustomVehicleCol(uint32_t customModelId, std::string colFile);
+bool SetCustomVehicleDff(uint32_t customModelId);
+bool SetCustomVehicleTxd(uint32_t customModelId);
+bool SetCustomVehicleCol(uint32_t customModelId);
 bool CommitCustomVehicleDef(uint32_t customModelId);
 bool IsCustomVehicle(uint32_t modelId);
 void SendCustomVehicleDefToPlayer(IPlayer& player, uint32_t modelId);

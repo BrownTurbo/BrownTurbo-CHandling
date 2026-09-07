@@ -75,13 +75,6 @@ enum class RejectReason : uint8_t {
 
 #pragma pack(push, 1)
 
-struct PacketHeader {
-	uint32_t magic;
-	uint16_t version;
-	uint32_t revision;
-	Action action;
-};
-
 struct AssetDescriptor {
 	AssetType type;
 	uint64_t size;

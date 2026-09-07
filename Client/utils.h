@@ -12,8 +12,13 @@
 #include <RakHook/samp.hpp>
 
 #include <windows.h>
+#include <Psapi.h>
 #include <cstdint>
+#include <filesystem>
+#include <shlobj.h>
 #include <variant>
+
+namespace fs = std::filesystem;
 
 bool SendMsg(int color, const char* msg);
 
@@ -42,3 +47,5 @@ bool IsExecutableAddress(uintptr_t address);
 bool IsInsideMainModule(uintptr_t address);
 void* GtaAddress(uintptr_t gtaAddress);
 bool LooksLikeFunctionEntry(uintptr_t address);
+fs::path GetDocumentsDirectory();
+fs::path GetSampCacheRoot();

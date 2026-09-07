@@ -757,19 +757,19 @@ bool SetCustomVehicleAsset(uint32_t customModelId, std::string filename, CustomV
 	return true;
 }
 
-bool SetCustomVehicleDff(uint32_t customModelId, std::string dffFile)
+bool SetCustomVehicleDff(uint32_t customModelId)
 {
-	return SetCustomVehicleAsset(customModelId, std::move(dffFile), &CustomVeh::Protocol::VehicleDefinition::dff);
+	return SetCustomVehicleAsset(customModelId, GetAssetPath(customModelId, CustomVeh::Protocol::AssetType::Dff).string(), &CustomVeh::Protocol::VehicleDefinition::dff);
 }
 
-bool SetCustomVehicleTxd(uint32_t customModelId, std::string txdFile)
+bool SetCustomVehicleTxd(uint32_t customModelId)
 {
-	return SetCustomVehicleAsset(customModelId, std::move(txdFile), &CustomVeh::Protocol::VehicleDefinition::txd);
+	return SetCustomVehicleAsset(customModelId, GetAssetPath(customModelId, CustomVeh::Protocol::AssetType::Txd).string(), &CustomVeh::Protocol::VehicleDefinition::txd);
 }
 
-bool SetCustomVehicleCol(uint32_t customModelId, std::string colFile)
+bool SetCustomVehicleCol(uint32_t customModelId)
 {
-	return SetCustomVehicleAsset(customModelId, std::move(colFile), &CustomVeh::Protocol::VehicleDefinition::col);
+	return SetCustomVehicleAsset(customModelId, GetAssetPath(customModelId, CustomVeh::Protocol::AssetType::Col).string(), &CustomVeh::Protocol::VehicleDefinition::col);
 }
 
 bool CommitCustomVehicleDef(uint32_t customModelId)

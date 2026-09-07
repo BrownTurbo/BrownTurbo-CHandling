@@ -441,34 +441,22 @@ SCRIPT_API(BeginCustomVehicleDef, bool(int customModelId, int visualBase, int au
 	return true;
 }
 
-// native SetCustomVehicleDff(customModelId, const dffUrl[]);
-SCRIPT_API(SetCustomVehicleDff, bool(int customModelId, const std::string& dffUrl))
+// native SetCustomVehicleDff(customModelId);
+SCRIPT_API(SetCustomVehicleDff, bool(int customModelId))
 {
-	if (dffUrl.empty())
-	{
-		return false;
-	}
-	return HandlingMgr::SetCustomVehicleDff(static_cast<uint32_t>(customModelId), dffUrl);
+	return HandlingMgr::SetCustomVehicleDff(static_cast<uint32_t>(customModelId));
 }
 
-// native SetCustomVehicleTxd(customModelId, const txdUrl[]);
-SCRIPT_API(SetCustomVehicleTxd, bool(int customModelId, const std::string& txdUrl))
+// native SetCustomVehicleTxd(customModelId);
+SCRIPT_API(SetCustomVehicleTxd, bool(int customModelId))
 {
-	if (txdUrl.empty())
-	{
-		return false;
-	}
-	return HandlingMgr::SetCustomVehicleTxd(static_cast<uint32_t>(customModelId), txdUrl);
+	return HandlingMgr::SetCustomVehicleTxd(static_cast<uint32_t>(customModelId));
 }
 
-// native SetCustomVehicleCol(customModelId, const colUrl[]);
-SCRIPT_API(SetCustomVehicleCol, bool(int customModelId, const std::string& colUrl))
+// native SetCustomVehicleCol(customModelId);
+SCRIPT_API(SetCustomVehicleCol, bool(int customModelId))
 {
-	if (colUrl.empty())
-	{
-		return false;
-	}
-	return HandlingMgr::SetCustomVehicleCol(static_cast<uint32_t>(customModelId), colUrl);
+	return HandlingMgr::SetCustomVehicleCol(static_cast<uint32_t>(customModelId));
 }
 
 // native CommitCustomVehicleDef(customModelId);

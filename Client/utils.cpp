@@ -1,8 +1,6 @@
 #include "utils.h"
 #include <plugin_sa.h>
 
-#include <Psapi.h>
-
 bool SendMsg(int color, const char* msg)
 {
 	rakhook::samp_ver version = rakhook::samp_version();
@@ -346,4 +344,38 @@ bool LooksLikeFunctionEntry(uintptr_t address)
 	if (code[0] == 0xEB)
 		return false;
 	return true;
+}
+
+namespace fs = std::filesystem;
+
+fs::path GetDocumentsDirectory()
+{
+	PWSTR raw = nullptr;
+
+	const HRESULT hr = SHGetKnownFolderPath(FOLDERID_Documents, KF_FLAG_DEFAULT, nullptr, &raw);
+	if (FAILED(hr) || !raw)
+		return {};
+
+	fs::path result(raw);
+	CoTaskMemFree(raw);
+
+	return result;
+}
+
+fs::path GetSampCacheRoot()
+{
+    fs::path documents = GetDocumentsDirectory();
+
+    if (documents.empty())
+        return {};
+
+	if (fs::exists(documents))
+	{
+		std::error_code ec;
+		fs::create_directories(documents, ec);
+	}
+    return documents /
+        "GTA San Andreas User Files" /
+        "SAMP" /
+        "cache";
 }

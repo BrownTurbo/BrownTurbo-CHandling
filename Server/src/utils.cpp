@@ -1,5 +1,6 @@
 #include "utils.h"
 #include "defs.h"
+#include "../../Shared/CustomVehicleProtocol.hpp"
 
 namespace fs = std::filesystem;
 
@@ -86,4 +87,21 @@ bool ComputeFileSha256(const std::string& relativePath, std::string& outHex)
 	{
 		return false;
 	}
+}
+
+fs::path GetAssetPath(std::uint32_t customModelId, CustomVeh::Protocol::AssetType type)
+{
+	const fs::path modelDirectory = fs::path(g_modelsDir) / std::to_string(customModelId);
+
+	switch (type)
+    {
+        case CustomVeh::Protocol::AssetType::Dff:
+            return modelDirectory / "model.dff";
+        case CustomVeh::Protocol::AssetType::Txd:
+            return modelDirectory / "model.txd";
+		case CustomVeh::Protocol::AssetType::Col:
+			return modelDirectory / "model.col";
+    }
+
+    return {};
 }

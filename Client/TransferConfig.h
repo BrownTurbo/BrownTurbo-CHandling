@@ -7,6 +7,8 @@
 #include <string>
 #include <unordered_map>
 
+#include "utils.h"
+
 namespace fs = std::filesystem;
 
 class TransferConfig {
@@ -77,26 +79,12 @@ public:
 		WorkerSleepMs = static_cast<uint32_t>(GetInt("WorkerSleepMs", WorkerSleepMs));
 	}
 
-	// {Documents}\GTA San Andreas User Files\SAMP\cache
-	static fs::path CacheDirectory()
-	{
-		char documentsPath[MAX_PATH] = { 0 };
-		if (SUCCEEDED(SHGetFolderPathA(nullptr, CSIDL_PERSONAL, nullptr, 0,
-				documentsPath))) {
-			fs::path dir = fs::path(documentsPath) / "GTA San Andreas User Files" / "SAMP" / "cache";
-			std::error_code ec;
-			fs::create_directories(dir, ec);
-			return dir;
-		}
-		return "<error>";
-	}
-
 private:
 	TransferConfig() = default;
 
 	static fs::path ConfigPath()
 	{
-		return CacheDirectory().parent_path() / "transfer_config.ini";
+		return GetSampCacheRoot() / "transfer_config.ini";
 	}
 
 	void WriteDefaults(const fs::path& path)
